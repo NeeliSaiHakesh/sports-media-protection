@@ -26,6 +26,7 @@ from fingerprint import (
     hash_distance,
     similarity_percentage,
 )
+from ai_engine import get_status as ai_get_status, _try_load_clip
 from legal import generate_dmca
 from scanner import scan_asset
 from watermark import extract_exif, visible_watermark, tiled_watermark
@@ -53,6 +54,10 @@ app.add_middleware(
 async def startup():
     await init_db()
     await seed_reference_db()
+    # Pre-warm CLIP model in a thread so it doesn't block the first request
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _try_load_clip)
 
 
 async def seed_reference_db():
@@ -114,6 +119,12 @@ async def health():
     return {"status": "ok", "service": "Digital Asset Protection API"}
 
 
+@app.get("/ai/status")
+async def ai_status_endpoint():
+    """Return current AI engine status — model name, device, availability."""
+    return ai_get_status()
+
+
 @app.post("/upload")
 async def upload_asset(
     file: UploadFile = File(...),
@@ -155,12 +166,16 @@ async def upload_asset(
         "filename": safe_name,
         "status": result.status,
         "similarity_percentage": result.similarity_percentage,
+        "ai_similarity": result.ai_similarity,
+        "hash_similarity": result.hash_similarity,
+        "ai_available": result.ai_available,
+        "ai_model": "CLIP ViT-B/32" if result.ai_available else None,
         "confidence_score": result.confidence_score,
         "number_of_matches": result.number_of_matches,
         "top_match_source": result.top_match_source,
         "risk_score": result.risk_score,
         "top_matches": [asdict(m) for m in result.top_matches],
-        "algorithm": algorithm,
+        "algorithm": "CLIP + " + algorithm if result.ai_available else algorithm,
         "exif": exif_data,
     }
 

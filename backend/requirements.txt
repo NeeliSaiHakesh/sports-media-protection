@@ -5,3 +5,7 @@ Pillow==10.3.0
 imagehash==4.3.1
 aiosqlite==0.20.0
 httpx==0.27.0
+# AI / CLIP engine
+torch
+transformers
+numpy

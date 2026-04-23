@@ -238,13 +238,27 @@
     <button class="btn btn-danger btn-lg" id="legal-cta-btn">Generate DMCA Notice →</button>
   </div>
 
+  <!-- AI Engine Badge -->
+  <div id="ai-engine-badge" style="display:none; margin-bottom:20px;">
+    <div style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12)); border:1px solid rgba(139,92,246,0.3); border-radius:100px; padding:6px 14px; font-size:0.8rem;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#aiGrad)" stroke-width="2"><defs><linearGradient id="aiGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      <span style="background:linear-gradient(135deg,#3B82F6,#8B5CF6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:700;" id="ai-model-name">CLIP ViT-B/32</span>
+      <span style="color:var(--text-muted);">· AI-Powered Detection</span>
+      <span style="width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span>
+    </div>
+  </div>
+
   <!-- Score Cards -->
   <div class="scores-grid" id="scores-grid">
     <div class="score-card fade-up fade-up-1" id="card-similarity">
-      <div class="score-label">Similarity</div>
+      <div class="score-label" id="sim-label">AI Similarity</div>
       <div class="score-value" id="val-similarity" style="color:var(--blue)">—%</div>
       <div class="match-bar">
         <div class="match-bar-fill" id="bar-similarity"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-top:6px;" id="sim-breakdown" class="hidden">
+        <span>🧠 CLIP: <span id="val-ai-sim">—</span>%</span>
+        <span>🔢 Hash: <span id="val-hash-sim">—</span>%</span>
       </div>
     </div>
     <div class="score-card fade-up fade-up-2" id="card-risk">
@@ -414,6 +428,10 @@ async function loadResult() {
   const {
     status,
     similarity_percentage: sim,
+    ai_similarity: aiSim = 0,
+    hash_similarity: hashSim = 0,
+    ai_available: aiOn = false,
+    ai_model: aiModel = null,
     confidence_score: conf,
     number_of_matches: numMatches,
     risk_score: risk,
@@ -474,6 +492,19 @@ async function loadResult() {
     simEl.style.color = riskCol;
     countUp(simEl, Math.round(sim), '%');
     animateBar(document.getElementById('bar-similarity'), sim, simColor);
+
+    // Show AI breakdown if CLIP was used
+    if (aiOn && aiSim > 0) {
+      document.getElementById('ai-engine-badge').style.display = 'block';
+      if (aiModel) document.getElementById('ai-model-name').textContent = aiModel;
+      document.getElementById('sim-label').textContent = 'AI Similarity';
+      const breakdown = document.getElementById('sim-breakdown');
+      breakdown.classList.remove('hidden');
+      document.getElementById('val-ai-sim').textContent = aiSim.toFixed(1);
+      document.getElementById('val-hash-sim').textContent = hashSim.toFixed(1);
+    } else {
+      document.getElementById('sim-label').textContent = 'Similarity';
+    }
 
     // Risk Score — COUNT-UP IS THE WOW MOMENT 🎯
     const riskEl = document.getElementById('val-risk');
