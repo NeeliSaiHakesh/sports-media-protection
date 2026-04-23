@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Violations — GuardSport AI</title>
+  <meta name="description" content="View all detected copyright violations in your sports media, sorted by risk score."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <style>
+    .violation-header-bar {
+      background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(139,92,246,0.08));
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .violation-alert-icon { font-size: 2.5rem; }
+
+    .v-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+      animation: fadeInUp 0.4s ease forwards;
+      opacity: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .v-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--red), #DC2626);
+    }
+
+    .v-card:hover {
+      border-color: rgba(239,68,68,0.4);
+      box-shadow: 0 4px 32px rgba(239,68,68,0.1);
+      transform: translateY(-2px);
+    }
+
+    .v-card-header {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .v-rank {
+      width: 36px; height: 36px; flex-shrink: 0;
+      border-radius: 10px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.9rem; color: var(--red);
+    }
+
+    .v-filename { font-size: 1rem; font-weight: 700; flex: 1; }
+    .v-time { font-size: 0.8rem; color: var(--text-muted); }
+
+    .v-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+
+    .v-metric {
+      text-align: center;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 8px;
+    }
+
+    .v-metric-val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+    .v-metric-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .v-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    .v-source {
+      font-size: 0.8rem; color: var(--text-muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; min-width: 0;
+    }
+
+    /* High risk glow */
+    .v-card.high-risk {
+      border-color: rgba(239,68,68,0.4);
+      box-shadow: 0 0 0 1px rgba(239,68,68,0.15);
+    }
+    .v-card.high-risk::before {
+      animation: glowPulse 2s infinite;
+      box-shadow: 0 0 10px var(--red);
+    }
+
+    .filter-bar {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 24px;
+    }
+
+    .filter-btn {
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.8rem; font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      border-color: var(--red);
+      color: var(--red-light);
+      background: rgba(239,68,68,0.1);
+    }
+
+    .sort-select {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lg5)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lg5" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html" class="active">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h1>Violations</h1>
+      <p>All detected copyright infringements, sorted by risk score</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a href="legal.html" class="btn btn-danger" id="bulk-legal-btn">Bulk Legal Action</a>
+      <a href="upload.html" class="btn btn-secondary">+ Scan New</a>
+    </div>
+  </div>
+
+  <!-- Alert bar -->
+  <div class="violation-header-bar" id="alert-bar" style="display:none;">
+    <div class="violation-alert-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div style="flex:1;">
+      <h3 style="color:var(--red-light); margin-bottom:4px;" id="alert-title">Violations Detected</h3>
+      <p id="alert-desc" style="font-size:0.9rem;"></p>
+    </div>
+    <a href="legal.html" class="btn btn-danger">Generate Takedowns</a>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <button class="filter-btn active" id="filter-all">All</button>
+    <button class="filter-btn" id="filter-high">High Risk (75+)</button>
+    <select class="sort-select" id="sort-select">
+      <option value="risk_desc">Sort: Risk ↓</option>
+      <option value="risk_asc">Sort: Risk ↑</option>
+      <option value="sim_desc">Sort: Similarity ↓</option>
+      <option value="date_desc">Sort: Newest</option>
+    </select>
+    <span id="count-label" style="margin-left:auto; font-size:0.85rem; color:var(--text-muted);"></span>
+  </div>
+
+  <!-- Violations list -->
+  <div id="violations-list"></div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { getViolations, riskLabel, riskColor, formatDate } from './js/api.js';
+
+let allViolations = [];
+let currentFilter = 'all';
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function renderViolations(violations) {
+  const list = document.getElementById('violations-list');
+  document.getElementById('count-label').textContent = `${violations.length} violation${violations.length !== 1 ? 's' : ''} found`;
+
+  if (violations.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state card">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.5" style="margin-bottom:12px; opacity:0.7;"><polyline points="20 6 9 17 4 12"/></svg>
+        <h3 style="color:var(--green)">No Violations Found</h3>
+        <p style="margin-bottom:20px;">All scanned assets appear to be original content. Keep protecting your media!</p>
+        <a href="upload.html" class="btn btn-primary">Scan More Media</a>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = violations.map((v, i) => {
+    const risk = v.risk_score || 0;
+    const rc = riskColor(risk);
+    const isHigh = risk >= 75;
+    const sim = v.similarity || 0;
+    return `
+    <div class="v-card ${isHigh ? 'high-risk' : ''}" style="animation-delay:${i * 0.06}s;">
+      <div class="v-card-header">
+        <div class="v-rank">#${i+1}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="v-filename">${v.filename || 'Unknown File'}</div>
+          <div class="v-time">${formatDate(v.timestamp)} · ${v.platform || 'Unknown Platform'}</div>
+        </div>
+        <span class="badge badge-copied">Copied</span>
+        ${isHigh ? '<span class="badge" style="background:rgba(239,68,68,0.15); color:var(--red-light); border-color:rgba(239,68,68,0.4);">HIGH RISK</span>' : ''}
+      </div>
+
+      <div class="v-metrics">
+        <div class="v-metric">
+          <div class="v-metric-val" style="color:${rc}">${risk.toFixed(1)}</div>
+          <div class="v-metric-lbl">Risk Score</div>
+        </div>
+        <div class="v-metric">
+          <div class="v-metric-val" style="color:${rc}">${sim.toFixed(1)}%</div>
+          <div class="v-metric-lbl">Similarity</div>
+        </div>
+        <div class="v-metric">
+          <div class="v-metric-val" style="color:var(--blue-light)">${(v.confidence || 0).toFixed(0)}%</div>
+          <div class="v-metric-lbl">Confidence</div>
+        </div>
+        <div class="v-metric">
+          <div class="v-metric-val" style="color:var(--text-secondary)">${v.num_matches || 0}</div>
+          <div class="v-metric-lbl">Matches</div>
+        </div>
+      </div>
+
+      <div class="v-actions">
+        <div class="v-source" title="${v.top_match_source || ''}">
+          ${v.top_match_source ? v.top_match_source.slice(0, 60) + (v.top_match_source.length > 60 ? '…' : '') : 'Unknown source'}
+        </div>
+        <button class="btn btn-danger btn-sm legal-btn" data-id="${v.asset_id}" data-file="${v.filename}" data-sim="${sim}" data-risk="${risk}">
+          Generate Notice
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Legal buttons
+  list.querySelectorAll('.legal-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sessionStorage.setItem('legalContext', JSON.stringify({
+        asset_id: btn.dataset.id,
+        filename: btn.dataset.file,
+        similarity: +btn.dataset.sim,
+        status: 'Copied',
+        risk_score: +btn.dataset.risk,
+      }));
+      window.location.href = 'legal.html';
+    });
+  });
+}
+
+function applyFilter() {
+  let filtered = [...allViolations];
+  if (currentFilter === 'high') filtered = filtered.filter(v => (v.risk_score || 0) >= 75);
+
+  const sortVal = document.getElementById('sort-select').value;
+  if (sortVal === 'risk_asc')  filtered.sort((a,b) => (a.risk_score||0) - (b.risk_score||0));
+  else if (sortVal === 'sim_desc') filtered.sort((a,b) => (b.similarity||0) - (a.similarity||0));
+  else if (sortVal === 'date_desc') filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+  else filtered.sort((a,b) => (b.risk_score||0) - (a.risk_score||0));
+
+  renderViolations(filtered);
+}
+
+async function load() {
+  try {
+    allViolations = await getViolations();
+
+    if (allViolations.length > 0) {
+      const alertBar = document.getElementById('alert-bar');
+      alertBar.style.display = 'flex';
+      document.getElementById('alert-title').textContent = `${allViolations.length} Copyright Violation${allViolations.length !== 1 ? 's' : ''} Detected`;
+      document.getElementById('alert-desc').textContent =
+        `Your sports media library has ${allViolations.length} confirmed infringement${allViolations.length !== 1 ? 's' : ''}. Take legal action immediately.`;
+    }
+
+    applyFilter();
+
+  } catch (err) {
+    showToast('error', 'Failed to load violations: ' + err.message);
+    document.getElementById('violations-list').innerHTML = `
+      <div class="empty-state card">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.5" style="margin-bottom:12px; opacity:0.6;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <h3>Connection Error</h3>
+        <p>Make sure the backend server is running on port 8000.</p>
+      </div>`;
+  }
+}
+
+// Filters
+document.getElementById('filter-all').addEventListener('click', () => {
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('filter-all').classList.add('active');
+  applyFilter();
+});
+document.getElementById('filter-high').addEventListener('click', () => {
+  currentFilter = 'high';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('filter-high').classList.add('active');
+  applyFilter();
+});
+document.getElementById('sort-select').addEventListener('change', applyFilter);
+
+load();
+
+// Bulk Export
+document.getElementById('bulk-legal-btn').addEventListener('click', async () => {
+  if (allViolations.length === 0) {
+    showToast('info', 'No violations to export.');
+    return;
+  }
+  const owner = prompt('Enter your organization name for the bulk DMCA export:', 'Your Organization');
+  if (!owner) return;
+
+  showToast('info', `Generating ${allViolations.length} DMCA notice(s)...`);
+
+  try {
+    const form = new FormData();
+    form.append('owner_name', owner);
+    const res = await fetch('http://localhost:8000/bulk-legal', { method: 'POST', body: form });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    const blob = new Blob([data.combined], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `DMCA_Bulk_${Date.now()}.txt`;
+    a.click();
+    showToast('success', `${data.count} DMCA notice(s) downloaded!`);
+  } catch (err) {
+    showToast('error', 'Export failed: ' + err.message);
+  }
+});
+</script>
+</body>
+</html>

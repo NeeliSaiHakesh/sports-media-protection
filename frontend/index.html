@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GuardSport AI — Digital Asset Protection for Sports Media</title>
+  <meta name="description" content="AI-powered sports media protection platform. Detect unauthorized image and video usage, get instant risk scores, and generate legal DMCA takedown notices."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <style>
+    /* ── Hero ────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative; overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.2) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139,92,246,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 20% 90%, rgba(16,185,129,0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* Animated grid */
+    .hero-grid {
+      position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    }
+
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--blue-light);
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.5s ease forwards;
+    }
+
+    .hero h1 {
+      margin-bottom: 24px;
+      animation: fadeInUp 0.5s 0.1s ease forwards; opacity: 0;
+    }
+
+    .hero p.lead {
+      font-size: 1.2rem;
+      max-width: 580px;
+      margin: 0 auto 40px;
+      animation: fadeInUp 0.5s 0.2s ease forwards; opacity: 0;
+    }
+
+    .hero-cta {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.5s 0.3s ease forwards; opacity: 0;
+    }
+
+    .hero-stats {
+      display: flex; align-items: center; justify-content: center;
+      gap: 40px; margin-top: 72px;
+      animation: fadeInUp 0.5s 0.5s ease forwards; opacity: 0;
+    }
+
+    .hero-stat-item { text-align: center; }
+    .hero-stat-value {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--blue-light), #A78BFA);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .hero-stat-divider { width: 1px; height: 40px; background: var(--border); }
+
+    /* ── Features ────────────────────────────────────── */
+    .features { padding: 100px 24px; }
+    .features-inner { max-width: var(--max-width); margin: 0 auto; }
+
+    .features-header { text-align: center; margin-bottom: 64px; }
+    .features-header h2 { margin-bottom: 12px; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 { margin-bottom: 8px; }
+    .feature-card p { font-size: 0.95rem; line-height: 1.7; }
+
+    /* ── How It Works ────────────────────────────────── */
+    .how-it-works { padding: 100px 24px; background: rgba(255,255,255,0.01); }
+    .how-inner { max-width: 900px; margin: 0 auto; }
+    .how-header { text-align: center; margin-bottom: 64px; }
+
+    .steps { display: flex; flex-direction: column; gap: 0; }
+
+    .step {
+      display: flex; gap: 32px; align-items: flex-start;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      width: 48px; height: 48px; flex-shrink: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--blue), #8B5CF6);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem; color: white;
+    }
+
+    .step-content h3 { margin-bottom: 6px; }
+
+    /* ── Status Demo ─────────────────────────────────── */
+    .demo-section { padding: 100px 24px; }
+    .demo-inner { max-width: var(--max-width); margin: 0 auto; }
+    .demo-header { text-align: center; margin-bottom: 64px; }
+
+    .demo-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .demo-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .demo-status { font-size: 3rem; font-weight: 900; margin-bottom: 8px; }
+    .demo-card p { font-size: 0.9rem; margin-top: 8px; }
+
+    .demo-card.original { border-color: rgba(16,185,129,0.3); }
+    .demo-card.suspicious { border-color: rgba(245,158,11,0.3); }
+    .demo-card.copied { border-color: rgba(239,68,68,0.4); animation: pulse-red 3s infinite; }
+
+    .demo-card.original:hover { box-shadow: 0 0 40px var(--green-glow); }
+    .demo-card.suspicious:hover { box-shadow: 0 0 40px var(--yellow-glow); }
+    .demo-card.copied:hover { box-shadow: 0 0 60px var(--red-glow); }
+
+    /* ── CTA Section ─────────────────────────────────── */
+    .cta-section {
+      padding: 100px 24px;
+      text-align: center;
+    }
+
+    .cta-inner {
+      max-width: 700px; margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 64px 48px;
+    }
+
+    .cta-inner h2 { margin-bottom: 16px; }
+    .cta-inner p { margin-bottom: 32px; font-size: 1.05rem; }
+
+    /* ── Footer ──────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .footer p { font-size: 0.85rem; color: var(--text-muted); }
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+        <path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/>
+        <path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#3B82F6"/>
+            <stop offset="1" stop-color="#8B5CF6"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      GuardSport AI
+      <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <span class="hero-eyebrow">AI-Powered Media Protection</span>
+    <h1>
+      Protect Your Sports Media<br/>
+      <span class="hero-gradient">From Unauthorized Use</span>
+    </h1>
+    <p class="lead">
+      Instant perceptual fingerprinting detects copied content across platforms.
+      Get real-time risk scores and generate DMCA takedowns in seconds.
+    </p>
+    <div class="hero-cta">
+      <a href="upload.html" class="btn btn-primary btn-lg" id="hero-cta-scan">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Start Scanning Free
+      </a>
+      <a href="dashboard.html" class="btn btn-secondary btn-lg" id="hero-cta-dashboard">
+        View Dashboard →
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+  <div class="features-inner">
+    <div class="features-header">
+      <h2>Everything You Need to <span class="gradient-text">Protect Your Content</span></h2>
+      <p>Comprehensive AI protection for sports media rights holders</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up fade-up-1" id="feature-fingerprint">
+        <div class="feature-icon" style="background:rgba(59,130,246,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <h3>Perceptual Fingerprinting</h3>
+        <p>Advanced hash algorithms detect visual similarity even when images are cropped, resized, or color-adjusted.</p>
+      </div>
+      <div class="feature-card fade-up fade-up-2" id="feature-risk">
+        <div class="feature-icon" style="background:rgba(239,68,68,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </div>
+        <h3>Intelligent Risk Scoring</h3>
+        <p>Platform-weighted risk scores (YouTube 1.5×, Instagram 1.2×) pinpoint the highest-priority violations instantly.</p>
+      </div>
+      <div class="feature-card fade-up fade-up-3" id="feature-legal">
+        <div class="feature-icon" style="background:rgba(16,185,129,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>One-Click DMCA Notices</h3>
+        <p>Legally formatted takedown notices generated instantly, ready to send to platforms and infringers.</p>
+      </div>
+      <div class="feature-card fade-up fade-up-4" id="feature-realtime">
+        <div class="feature-icon" style="background:rgba(139,92,246,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Real-Time Detection</h3>
+        <p>Sub-3-second scan times with async processing. Never wait for results — your content is protected immediately.</p>
+      </div>
+      <div class="feature-card fade-up fade-up-5" id="feature-dashboard">
+        <div class="feature-icon" style="background:rgba(245,158,11,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Live Dashboard</h3>
+        <p>Track all assets, violations, and risk scores in one unified view with real-time KPI metrics.</p>
+      </div>
+      <div class="feature-card fade-up fade-up-6" id="feature-multi">
+        <div class="feature-icon" style="background:rgba(236,72,153,0.15);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <h3>Multi-Platform Coverage</h3>
+        <p>Detect infringement across YouTube, Instagram, Twitter, Facebook, and unknown sources from a single scan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works">
+  <div class="how-inner">
+    <div class="how-header">
+      <h2>How It <span class="gradient-text">Works</span></h2>
+      <p>From upload to legal notice in under 3 seconds</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Upload Your Media</h3>
+          <p>Drag and drop images directly. We support JPEG, PNG, and WebP formats. Batch uploads supported.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>AI Fingerprinting</h3>
+          <p>Our perceptual hash engine normalizes the image and generates a 64-bit visual fingerprint that's resistant to minor edits.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Database Comparison</h3>
+          <p>The fingerprint is compared against our entire reference database. Hamming distance is converted to a similarity percentage.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Instant Verdict + Risk Score</h3>
+          <p>The system delivers a clear decision: <strong style="color:var(--green)">Original</strong>, <strong style="color:var(--yellow)">Suspicious</strong>, or <strong style="color:var(--red)">Copied</strong> — with a platform-weighted risk score.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h3>Generate Legal Notice</h3>
+          <p>With one click, generate a professionally formatted DMCA takedown notice ready to submit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Status Demo -->
+<section class="demo-section">
+  <div class="demo-inner">
+    <div class="demo-header">
+      <h2>Clear, Visual <span class="gradient-text">Verdicts</span></h2>
+      <p>No ambiguity — every scan returns a definitive status</p>
+    </div>
+    <div class="demo-cards">
+      <div class="demo-card original" id="demo-original">
+        <div class="demo-status" style="color:var(--green)">✅</div>
+        <h3 style="color:var(--green)">ORIGINAL</h3>
+        <p>0–60% similarity. Content appears to be unique and not copied from known sources.</p>
+        <div class="mt-16">
+          <span class="badge badge-original">Risk: Low</span>
+        </div>
+      </div>
+      <div class="demo-card suspicious" id="demo-suspicious">
+        <div class="demo-status" style="color:var(--yellow)">⚠️</div>
+        <h3 style="color:var(--yellow)">SUSPICIOUS</h3>
+        <p>60–85% similarity. Significant visual overlap detected — manual review recommended.</p>
+        <div class="mt-16">
+          <span class="badge badge-suspicious">Risk: Medium</span>
+        </div>
+      </div>
+      <div class="demo-card copied" id="demo-copied">
+        <div class="demo-status" style="color:var(--red)">🚨</div>
+        <h3 style="color:var(--red)">VIOLATION</h3>
+        <p>85–100% similarity. Unauthorized copy detected. Generate DMCA notice immediately.</p>
+        <div class="mt-16">
+          <span class="badge badge-copied">Risk: High</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <h2>Start Protecting Your <span class="gradient-text">Sports Media Today</span></h2>
+    <p>Join leading sports organizations using GuardSport AI to defend their content rights. No setup required.</p>
+    <a href="upload.html" class="btn btn-primary btn-lg" id="cta-final">
+      Start Your First Scan — Free
+    </a>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>© 2024 GuardSport AI — Digital Asset Protection for Sports Media</p>
+</footer>
+
+<script>
+  // Intersection observer for fade-up animations
+  const fadeCards = document.querySelectorAll('.feature-card');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  fadeCards.forEach(c => obs.observe(c));
+</script>
+</body>
+</html>

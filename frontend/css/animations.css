@@ -1,0 +1,268 @@
+/* ══════════════════════════════════════════════════
+   animations.css — Keyframes & animated components
+   ══════════════════════════════════════════════════ */
+
+/* ── Core keyframes ─────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 40px rgba(239,68,68,0.35); }
+  50%       { box-shadow: 0 0 80px rgba(239,68,68,0.7), 0 0 120px rgba(239,68,68,0.3); }
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 24px rgba(16,185,129,0.25); }
+  50%       { box-shadow: 0 0 60px rgba(16,185,129,0.5); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+
+@keyframes revealBadge {
+  0%   { opacity: 0; transform: scale(0.4) translateY(20px); filter: blur(8px); }
+  60%  { transform: scale(1.08) translateY(-4px); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes scanLine {
+  0%   { top: 0; opacity: 1; }
+  90%  { top: 100%; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes borderRotate {
+  to { --angle: 360deg; }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Animated hero gradient ─────────────────────── */
+.hero-gradient {
+  background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899, #10B981);
+  background-size: 300% 300%;
+  animation: gradientShift 6s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Scan line effect ────────────────────────────── */
+.scan-container {
+  position: relative; overflow: hidden;
+}
+
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  box-shadow: 0 0 12px var(--blue), 0 0 4px var(--blue);
+  animation: scanLine 2s ease-in-out infinite;
+}
+
+/* ── Animated status reveal ─────────────────────── */
+.status-reveal {
+  animation: revealBadge 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Float animation ─────────────────────────────── */
+.float { animation: float 3s ease-in-out infinite; }
+
+/* ── Fade in up (staggered) ─────────────────────── */
+.fade-up {
+  animation: fadeInUp 0.5s ease forwards;
+  opacity: 0;
+}
+.fade-up-1 { animation-delay: 0.1s; }
+.fade-up-2 { animation-delay: 0.2s; }
+.fade-up-3 { animation-delay: 0.3s; }
+.fade-up-4 { animation-delay: 0.4s; }
+.fade-up-5 { animation-delay: 0.5s; }
+.fade-up-6 { animation-delay: 0.6s; }
+
+/* ── Animated drag zone border ───────────────────── */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.drop-zone-animated {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+}
+
+.drop-zone-animated::before,
+.drop-zone-animated::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--radius-lg) + 2px);
+  background: conic-gradient(
+    from var(--angle),
+    transparent 60%,
+    var(--blue) 80%,
+    #8B5CF6 90%,
+    var(--blue) 100%
+  );
+  animation: borderRotate 3s linear infinite;
+  z-index: -1;
+}
+
+.drop-zone-animated::after {
+  filter: blur(8px);
+  opacity: 0.4;
+}
+
+/* ── Particle background ─────────────────────────── */
+.particles-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: var(--blue);
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ── Risk score ring ─────────────────────────────── */
+.risk-ring {
+  position: relative;
+  width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.risk-ring-svg {
+  position: absolute; inset: 0;
+  transform: rotate(-90deg);
+}
+
+.risk-ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.07);
+  stroke-width: 8;
+}
+
+.risk-ring-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 314;
+  stroke-dashoffset: 314;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.risk-ring-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.risk-ring-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Match percentage bar ────────────────────────── */
+.match-bar-wrapper {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.match-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.match-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 0%;
+}
+
+.match-bar-fill.green  { background: linear-gradient(90deg, #059669, var(--green)); }
+.match-bar-fill.yellow { background: linear-gradient(90deg, #D97706, var(--yellow)); }
+.match-bar-fill.red    { background: linear-gradient(90deg, #DC2626, var(--red)); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+
+/* ── Glow border card ────────────────────────────── */
+.card-glow-red {
+  border-color: rgba(239,68,68,0.4) !important;
+  box-shadow: 0 0 0 1px rgba(239,68,68,0.2), var(--shadow) !important;
+}
+
+.card-glow-green {
+  border-color: rgba(16,185,129,0.4) !important;
+  box-shadow: 0 0 0 1px rgba(16,185,129,0.2), var(--shadow) !important;
+}
+
+/* ── Animated dots ───────────────────────────────── */
+.dot-pulse::after {
+  content: '...';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.';   }
+  40%      { content: '..';  }
+  60%      { content: '...'; }
+  80%, 100%{ content: '';    }
+}

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Asset Library — GuardSport AI</title>
+  <meta name="description" content="Browse all scanned sports media assets, view status, risk score, and manage your library."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <script src="js/theme.js"></script>
+  <style>
+    .library-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .asset-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: all 0.2s;
+      animation: fadeInUp 0.4s ease forwards;
+      opacity: 0;
+      position: relative;
+    }
+    .asset-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+    }
+
+    .asset-thumb {
+      width: 100%; height: 160px;
+      object-fit: cover;
+      display: block;
+      background: var(--bg-secondary);
+    }
+    .asset-thumb-placeholder {
+      width: 100%; height: 160px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+    }
+
+    .asset-body { padding: 16px; }
+    .asset-name {
+      font-weight: 600; font-size: 0.875rem;
+      margin-bottom: 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .asset-time { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; }
+
+    .asset-metrics {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .asset-metric {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px;
+      text-align: center;
+    }
+    [data-theme="light"] .asset-metric { background: rgba(0,0,0,0.03); }
+    .asset-metric-val { font-size: 1rem; font-weight: 800; }
+    .asset-metric-lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .asset-actions { display: flex; gap: 8px; }
+
+    .delete-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .delete-btn:hover {
+      border-color: var(--red);
+      color: var(--red-light);
+      background: var(--red-bg);
+    }
+
+    .filter-row {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .count-badge {
+      margin-left: auto;
+      font-size: 0.85rem; color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lgLib)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lgLib" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html" class="active">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h1>Asset Library</h1>
+      <p>All scanned media assets with their scan results</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a href="http://localhost:8000/export/scans.csv" class="btn btn-secondary" id="export-csv-btn" target="_blank">Export CSV</a>
+      <a href="upload.html" class="btn btn-primary">+ Scan New</a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="Original">Original</button>
+    <button class="filter-btn" data-filter="Suspicious">Suspicious</button>
+    <button class="filter-btn" data-filter="Copied">Violations</button>
+    <span class="count-badge" id="count-label"></span>
+  </div>
+
+  <div class="library-grid" id="library-grid"></div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { getAssets, riskColor, riskLabel, formatDate } from './js/api.js';
+
+const API = 'http://localhost:8000';
+let allAssets = [];
+let currentFilter = 'all';
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function statusClass(s) {
+  if (s === 'Copied') return 'copied';
+  if (s === 'Suspicious') return 'suspicious';
+  return 'original';
+}
+
+function render(assets) {
+  const grid = document.getElementById('library-grid');
+  document.getElementById('count-label').textContent = `${assets.length} asset${assets.length !== 1 ? 's' : ''}`;
+
+  if (assets.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1; padding:80px 24px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3; margin-bottom:16px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <h3>No assets found</h3>
+        <p style="margin-bottom:20px;">Upload some media to get started.</p>
+        <a href="upload.html" class="btn btn-primary">Scan Media</a>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = assets.map((a, i) => {
+    const status = a.scan_status || 'Original';
+    const risk   = a.risk_score || 0;
+    const sim    = a.similarity || 0;
+    const rc     = riskColor(risk);
+    const sClass = statusClass(status);
+    return `
+    <div class="asset-card" style="animation-delay:${i * 0.04}s;" data-id="${a.id}">
+      <div class="asset-thumb-placeholder" id="thumb-${a.id}">
+        <img class="asset-thumb" src="${API}/asset-image/${a.id}"
+          onerror="this.parentElement.innerHTML='<svg width=40 height=40 viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\' style=\\'opacity:0.3\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\'/><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"
+          alt="${a.filename}"/>
+      </div>
+      <div class="asset-body">
+        <div class="asset-name" title="${a.filename}">${a.filename}</div>
+        <div class="asset-time">${formatDate(a.created_at)}</div>
+        <div class="asset-metrics">
+          <div class="asset-metric">
+            <div class="asset-metric-val">
+              <span class="badge badge-${sClass}" style="font-size:0.65rem; padding:2px 7px;">${status}</span>
+            </div>
+            <div class="asset-metric-lbl">Verdict</div>
+          </div>
+          <div class="asset-metric">
+            <div class="asset-metric-val" style="color:${rc}">${risk.toFixed(0)}</div>
+            <div class="asset-metric-lbl">Risk Score</div>
+          </div>
+          <div class="asset-metric">
+            <div class="asset-metric-val" style="color:${rc}">${sim.toFixed(1)}%</div>
+            <div class="asset-metric-lbl">Similarity</div>
+          </div>
+          <div class="asset-metric">
+            <div class="asset-metric-val" style="color:var(--text-secondary)">${a.platform || '—'}</div>
+            <div class="asset-metric-lbl">Platform</div>
+          </div>
+        </div>
+        <div class="asset-actions">
+          <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="viewAsset(${a.id})">View Scan</button>
+          <button class="delete-btn" data-id="${a.id}" aria-label="Delete asset">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Delete handlers
+  grid.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if (!confirm('Delete this asset and its scan data?')) return;
+      try {
+        const res = await fetch(`${API}/assets/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        allAssets = allAssets.filter(a => a.id != id);
+        applyFilter();
+        showToast('success', 'Asset deleted');
+      } catch (err) {
+        showToast('error', err.message);
+      }
+    });
+  });
+}
+
+window.viewAsset = (id) => {
+  // Find asset scan data and navigate
+  const asset = allAssets.find(a => a.id === id);
+  if (asset) {
+    sessionStorage.setItem('scanResult', JSON.stringify({
+      asset_id: id,
+      fileName: asset.filename,
+      status: asset.scan_status || 'Original',
+      similarity_percentage: asset.similarity || 0,
+      confidence_score: asset.confidence || 0,
+      number_of_matches: asset.num_matches || 0,
+      risk_score: asset.risk_score || 0,
+      top_match_source: asset.top_match_source || '',
+      top_matches: [],
+      previewUrl: `${API}/asset-image/${id}`,
+    }));
+    window.location.href = 'results.html';
+  }
+};
+
+function applyFilter() {
+  let filtered = [...allAssets];
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(a => (a.scan_status || 'Original') === currentFilter);
+  }
+  render(filtered);
+}
+
+// Enrich assets with scan data
+async function load() {
+  try {
+    const [assets, scans] = await Promise.all([
+      fetch(`${API}/assets`).then(r => r.json()),
+      fetch(`${API}/scans?limit=200`).then(r => r.json()),
+    ]);
+
+    // Build scan map by asset_id (latest scan)
+    const scanMap = {};
+    scans.forEach(s => {
+      if (!scanMap[s.asset_id] || s.timestamp > scanMap[s.asset_id].timestamp) {
+        scanMap[s.asset_id] = s;
+      }
+    });
+
+    allAssets = assets.map(a => ({
+      ...a,
+      scan_status: scanMap[a.id]?.status || null,
+      risk_score: scanMap[a.id]?.risk_score || 0,
+      similarity: scanMap[a.id]?.similarity || 0,
+      confidence: scanMap[a.id]?.confidence || 0,
+      num_matches: scanMap[a.id]?.num_matches || 0,
+      top_match_source: scanMap[a.id]?.top_match_source || '',
+    }));
+
+    applyFilter();
+  } catch (err) {
+    showToast('error', 'Failed to load library: ' + err.message);
+    document.getElementById('library-grid').innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <h3>Connection Error</h3>
+        <p>Make sure the backend is running on port 8000.</p>
+      </div>`;
+  }
+}
+
+// Filters
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    applyFilter();
+  });
+});
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload & Scan — GuardSport AI</title>
+  <meta name="description" content="Upload sports media files for AI-powered copyright infringement detection and risk scoring."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <style>
+    .upload-layout {
+      max-width: 800px; margin: 0 auto;
+      padding: 88px 24px 64px;
+    }
+
+    /* ── Drop Zone ───────────────────────────────────── */
+    .drop-zone {
+      position: relative;
+      min-height: 280px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      border: 2px dashed rgba(59,130,246,0.4);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.25s;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--blue);
+      border-style: solid;
+      background: rgba(59,130,246,0.05);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.1), var(--shadow);
+    }
+
+    .drop-zone-icon {
+      font-size: 3.5rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .drop-zone-text { text-align: center; }
+    .drop-zone-text h3 { margin-bottom: 4px; font-size: 1.2rem; }
+    .drop-zone-text p  { font-size: 0.875rem; }
+
+    .drop-zone-browse {
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--blue-light);
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .drop-zone-browse:hover {
+      background: rgba(59,130,246,0.2);
+      border-color: var(--blue);
+    }
+
+    .drop-zone-formats {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    }
+
+    .format-tag {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    #file-input { display: none; }
+
+    /* ── Preview Grid ────────────────────────────────── */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      animation: scaleIn 0.3s ease;
+    }
+
+    .preview-item img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-item .remove-btn {
+      position: absolute; top: 6px; right: 6px;
+      width: 24px; height: 24px;
+      background: rgba(0,0,0,0.7);
+      border: none; border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      color: white;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .preview-item:hover .remove-btn { opacity: 1; }
+
+    .preview-item .preview-name {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.7);
+      font-size: 0.65rem; color: white;
+      padding: 4px 6px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Options Panel ───────────────────────────────── */
+    .options-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 0.8rem; font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.3px;
+    }
+    .form-input {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    select.form-input option {
+      background: var(--bg-secondary);
+    }
+
+    /* ── Submit Area ─────────────────────────────────── */
+    .submit-area {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+
+    .file-count {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .file-count strong { color: var(--text-primary); }
+
+    /* ── Progress ────────────────────────────────────── */
+    .upload-progress {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .upload-progress.visible { display: block; }
+
+    .progress-label {
+      display: flex; justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.875rem;
+    }
+
+    /* ── Scan Overlay ────────────────────────────────── */
+    #scan-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6,9,15,0.95);
+      backdrop-filter: blur(16px);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 32px;
+    }
+
+    #scan-overlay.active { display: flex; }
+
+    .overlay-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 48px 56px;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scan-image-preview {
+      width: 120px; height: 120px;
+      border-radius: var(--radius);
+      object-fit: cover;
+      margin: 0 auto 24px;
+      display: block;
+      border: 2px solid var(--border);
+    }
+
+    .scanning-ring {
+      width: 64px; height: 64px;
+      border: 4px solid rgba(59,130,246,0.15);
+      border-top-color: var(--blue);
+      border-right-color: #8B5CF6;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    .overlay-steps {
+      display: flex; flex-direction: column; gap: 10px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .overlay-step {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.875rem; color: var(--text-muted);
+      transition: color 0.3s;
+    }
+
+    .overlay-step.active { color: var(--text-primary); }
+    .overlay-step.done   { color: var(--green); }
+
+    .step-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .overlay-step.active .step-dot { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+    .overlay-step.done  .step-dot  { background: var(--green); }
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lg2)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lg2" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta active">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="upload-layout">
+  <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h1>Scan Sports Media</h1>
+      <p>Upload images to detect unauthorized usage and get instant risk scores</p>
+    </div>
+    <button class="btn btn-secondary" id="demo-btn" title="Auto-run a demo scan for presentations">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Run Demo
+    </button>
+  </div>
+
+  <!-- Mode Tabs -->
+  <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:24px; gap:0;">
+    <button class="tab-btn active" id="tab-file" data-tab="file"
+      style="padding:10px 20px; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-size:0.875rem; font-weight:600; color:var(--text-muted); transition:all 0.2s;">
+      Upload File
+    </button>
+    <button class="tab-btn" id="tab-url" data-tab="url"
+      style="padding:10px 20px; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-size:0.875rem; font-weight:600; color:var(--text-muted); transition:all 0.2s;">
+      Scan from URL
+    </button>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone drop-zone-animated" id="drop-zone">
+    <div class="scan-line" id="drop-scan-line" style="display:none;"></div>
+    <div class="drop-zone-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.5;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div class="drop-zone-text">
+      <h3>Drop your sports media here</h3>
+      <p>or click to browse files from your computer</p>
+    </div>
+    <button class="drop-zone-browse" id="browse-btn">Browse Files</button>
+    <div class="drop-zone-formats">
+      <span class="format-tag">JPEG</span>
+      <span class="format-tag">PNG</span>
+      <span class="format-tag">WebP</span>
+      <span class="format-tag">Max 20MB</span>
+    </div>
+    <input type="file" id="file-input" multiple accept="image/jpeg,image/png,image/webp"/>
+  </div>
+
+  <!-- Preview Grid -->
+  <div class="preview-grid" id="preview-grid"></div>
+
+  <!-- Upload Progress -->
+  <div class="upload-progress" id="upload-progress">
+    <div class="progress-label">
+      <span id="progress-text">Uploading…</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%;background:var(--blue);"></div>
+    </div>
+  </div>
+
+  <!-- URL Scanner Tab Panel -->
+  <div id="url-panel" style="display:none; margin-bottom:24px;">
+    <div class="options-panel">
+      <h4 style="margin-bottom:12px;">Scan Image from URL</h4>
+      <p style="font-size:0.875rem; margin-bottom:16px;">Paste a direct link to a public image — the system will fetch and analyze it.</p>
+      <div class="form-group">
+        <label class="form-label" for="image-url-input">Image URL</label>
+        <input type="url" class="form-input" id="image-url-input"
+          placeholder="https://example.com/sports-photo.jpg"
+          style="width:100%;"/>
+      </div>
+    </div>
+    <div class="submit-area">
+      <div class="file-count" id="url-count">Enter an image URL above</div>
+      <button class="btn btn-primary btn-lg" id="scan-url-btn" disabled>Analyze URL</button>
+    </div>
+  </div>
+
+  <!-- Options -->
+  <div class="options-panel" id="options-panel">
+    <h4 style="margin-bottom:16px;">Scan Options</h4>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+      <div class="form-group">
+        <label class="form-label" for="platform-select">Source Platform</label>
+        <select class="form-input" id="platform-select">
+          <option value="Unknown">Unknown / Other</option>
+          <option value="YouTube">YouTube (1.5× risk)</option>
+          <option value="Instagram">Instagram (1.2× risk)</option>
+          <option value="Twitter">Twitter (1.1× risk)</option>
+          <option value="Facebook">Facebook (1.1× risk)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="algo-select">Fingerprint Algorithm</label>
+        <select class="form-input" id="algo-select">
+          <option value="average">Average Hash (default)</option>
+          <option value="difference">Difference Hash</option>
+          <option value="color">Color Hash</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="source-url">Source URL (Optional)</label>
+        <input type="url" class="form-input" id="source-url" placeholder="https://example.com/video"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="submit-area">
+    <div class="file-count" id="file-count">No files selected</div>
+    <button class="btn btn-primary btn-lg" id="scan-btn" disabled>
+      Analyze Media
+    </button>
+  </div>
+</div>
+
+<!-- Scanning Overlay -->
+<div id="scan-overlay">
+  <div class="overlay-card">
+    <div class="scan-line"></div>
+    <div class="scanning-ring"></div>
+    <h3 style="margin-bottom:4px;" id="overlay-title">Analyzing Media<span class="dot-pulse"></span></h3>
+    <p style="font-size:0.875rem; margin-bottom:24px;" id="overlay-file">Processing your file</p>
+    <div class="overlay-steps" id="overlay-steps">
+      <div class="overlay-step" id="step-normalize">
+        <div class="step-dot"></div> Normalizing image format
+      </div>
+      <div class="overlay-step" id="step-hash">
+        <div class="step-dot"></div> Generating perceptual fingerprint
+      </div>
+      <div class="overlay-step" id="step-compare">
+        <div class="step-dot"></div> Comparing against reference database
+      </div>
+      <div class="overlay-step" id="step-classify">
+        <div class="step-dot"></div> Classifying and scoring risk
+      </div>
+      <div class="overlay-step" id="step-result">
+        <div class="step-dot"></div> Generating final verdict
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+  import { uploadAsset, scanUrl } from './js/api.js';
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const browseBtn = document.getElementById('browse-btn');
+  const previewGrid = document.getElementById('preview-grid');
+  const scanBtn = document.getElementById('scan-btn');
+  const fileCountEl = document.getElementById('file-count');
+  const overlay = document.getElementById('scan-overlay');
+  const toastCont = document.getElementById('toast-container');
+  const dropScanLine = document.getElementById('drop-scan-line');
+
+  let selectedFiles = [];
+
+  // ── Drop Zone ──────────────────────────────────────────
+  browseBtn.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', (e) => { if (e.target !== browseBtn) fileInput.click(); });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    dropZone.classList.add('dragover');
+    dropScanLine.style.display = 'block';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+    dropScanLine.style.display = 'none';
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    dropZone.classList.remove('dragover');
+    dropScanLine.style.display = 'none';
+    addFiles([...e.dataTransfer.files]);
+  });
+  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+  function addFiles(files) {
+    const valid = files.filter(f => f.type.startsWith('image/'));
+    selectedFiles = [...selectedFiles, ...valid];
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    previewGrid.innerHTML = '';
+    selectedFiles.forEach((file, i) => {
+      const url = URL.createObjectURL(file);
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      item.innerHTML = `
+        <img src="${url}" alt="${file.name}"/>
+        <button class="remove-btn" data-idx="${i}" title="Remove">✕</button>
+        <div class="preview-name">${file.name}</div>
+      `;
+      previewGrid.appendChild(item);
+    });
+    previewGrid.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedFiles.splice(+btn.dataset.idx, 1);
+        renderPreviews();
+      });
+    });
+    const n = selectedFiles.length;
+    fileCountEl.innerHTML = n === 0
+      ? 'No files selected'
+      : `<strong>${n}</strong> file${n > 1 ? 's' : ''} ready to scan`;
+    scanBtn.disabled = n === 0;
+  }
+
+  // ── Scanning ───────────────────────────────────────────
+  const STEPS = ['step-normalize','step-hash','step-compare','step-classify','step-result'];
+
+  function setStep(idx) {
+    STEPS.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active', 'done');
+      if (i < idx) el.classList.add('done');
+      else if (i === idx) el.classList.add('active');
+    });
+  }
+
+  async function animateSteps() {
+    for (let i = 0; i < STEPS.length; i++) {
+      setStep(i);
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
+    }
+  }
+
+  scanBtn.addEventListener('click', async () => {
+    if (!selectedFiles.length) return;
+    const platform  = document.getElementById('platform-select').value;
+    const sourceUrl = document.getElementById('source-url').value;
+    const algorithm = document.getElementById('algo-select').value;
+
+    overlay.classList.add('active');
+    document.getElementById('overlay-file').textContent = selectedFiles[0].name;
+    const stepsPromise = animateSteps();
+
+    try {
+      // Upload first file (demo flow: one at a time, show result)
+      const file = selectedFiles[0];
+      const [result] = await Promise.all([
+        uploadAsset(file, sourceUrl, platform, algorithm),
+        stepsPromise,
+      ]);
+
+      overlay.classList.remove('active');
+
+      // For multiple files: redirect to results with the first result
+      sessionStorage.setItem('scanResult', JSON.stringify({
+        ...result,
+        fileName: file.name,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      window.location.href = 'results.html';
+
+    } catch (err) {
+      overlay.classList.remove('active');
+      showToast('error', '⚠️ ' + err.message);
+    }
+  });
+
+  function showToast(type, msg) {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    toastCont.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  // ── Tab Switcher ──────────────────────────────────────────
+  const FILE_PANEL = document.querySelector('.drop-zone').parentElement;
+  const urlPanel   = document.getElementById('url-panel');
+  const optPanel   = document.getElementById('options-panel');
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.borderBottomColor = 'transparent';
+        b.style.color = 'var(--text-muted)';
+      });
+      btn.classList.add('active');
+      btn.style.borderBottomColor = 'var(--blue)';
+      btn.style.color = 'var(--text-primary)';
+
+      if (tab === 'url') {
+        document.getElementById('drop-zone').style.display = 'none';
+        document.getElementById('preview-grid').style.display = 'none';
+        document.getElementById('upload-progress').style.display = 'none';
+        document.querySelector('.submit-area:not(#url-panel .submit-area)').style.display = 'none';
+        urlPanel.style.display = 'block';
+      } else {
+        document.getElementById('drop-zone').style.display = '';
+        document.getElementById('preview-grid').style.display = '';
+        document.querySelector('.submit-area:not(#url-panel .submit-area)').style.display = '';
+        urlPanel.style.display = 'none';
+      }
+    });
+  });
+  // Init active tab style
+  document.getElementById('tab-file').style.borderBottomColor = 'var(--blue)';
+  document.getElementById('tab-file').style.color = 'var(--text-primary)';
+
+  // ── URL Scanner ──────────────────────────────────────────
+  const urlInput  = document.getElementById('image-url-input');
+  const scanUrlBtn = document.getElementById('scan-url-btn');
+  const urlCount  = document.getElementById('url-count');
+
+  urlInput.addEventListener('input', () => {
+    const v = urlInput.value.trim();
+    const valid = v.startsWith('http') && v.length > 12;
+    scanUrlBtn.disabled = !valid;
+    urlCount.textContent = valid ? 'Ready to scan' : 'Enter an image URL above';
+  });
+
+  scanUrlBtn.addEventListener('click', async () => {
+    const imgUrl    = urlInput.value.trim();
+    const platform  = document.getElementById('platform-select').value;
+    const sourceUrl = document.getElementById('source-url').value;
+    const algorithm = document.getElementById('algo-select').value;
+    if (!imgUrl) return;
+
+    overlay.classList.add('active');
+    document.getElementById('overlay-file').textContent = imgUrl.slice(0, 60);
+    const stepsPromise = animateSteps();
+    try {
+      const [result] = await Promise.all([scanUrl(imgUrl, sourceUrl, platform, algorithm), stepsPromise]);
+      overlay.classList.remove('active');
+      sessionStorage.setItem('scanResult', JSON.stringify({
+        ...result,
+        fileName: result.filename || imgUrl.split('/').pop(),
+        previewUrl: `http://localhost:8000/asset-image/${result.asset_id}`,
+      }));
+      window.location.href = 'results.html';
+    } catch (err) {
+      overlay.classList.remove('active');
+      showToast('error', err.message);
+    }
+  });
+
+  // ── Demo Mode ─────────────────────────────────────────────
+  document.getElementById('demo-btn').addEventListener('click', async () => {
+    showToast('info', 'Loading demo image…');
+    try {
+      // Fetch reference assets from the dedicated endpoint
+      const assets = await fetch('http://localhost:8000/assets/reference').then(r => r.json());
+      if (!assets.length) { showToast('error', 'No reference assets found for demo.'); return; }
+      const ref = assets[Math.floor(Math.random() * assets.length)];
+      const imgBlob = await fetch(`http://localhost:8000/asset-image/${ref.id}`).then(r => r.blob());
+      const demoFile = new File([imgBlob], `demo_${ref.filename}`, { type: imgBlob.type || 'image/jpeg' });
+      document.getElementById('platform-select').value = 'YouTube';
+      addFiles([demoFile]);
+      showToast('success', 'Demo image loaded. Click Analyze Media to run!');
+    } catch (err) {
+      showToast('error', 'Demo failed: ' + err.message);
+    }
+  });
+</script>
+</body>
+</html>

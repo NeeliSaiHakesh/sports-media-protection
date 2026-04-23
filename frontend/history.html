@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scan History — GuardSport AI</title>
+  <meta name="description" content="Full scan history log with date, status, risk score, and platform filters. Download as CSV."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <script src="js/theme.js"></script>
+  <style>
+    .history-toolbar {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .search-input {
+      flex: 1; min-width: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    [data-theme="light"] .search-input { background: #fff; }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    .pagination {
+      display: flex; align-items: center; gap: 8px;
+      justify-content: center; margin-top: 32px;
+    }
+    .page-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 14px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .page-btn:hover, .page-btn.active {
+      border-color: var(--blue);
+      color: var(--blue-light);
+      background: rgba(59,130,246,0.08);
+    }
+    .page-btn:disabled { opacity: 0.4; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lgHist)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lgHist" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h1>Scan History</h1>
+      <p>Full audit log of all analyzed media assets</p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <a href="http://localhost:8000/export/scans.csv" class="btn btn-secondary" target="_blank">Export CSV</a>
+      <a href="upload.html" class="btn btn-primary">+ New Scan</a>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="history-toolbar">
+    <input type="search" class="search-input" id="search-input" placeholder="Search by filename or platform…" autocomplete="off"/>
+    <select class="sort-select" id="status-filter" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text-primary); font-size:0.875rem; font-family:inherit;">
+      <option value="all">All statuses</option>
+      <option value="Original">Original</option>
+      <option value="Suspicious">Suspicious</option>
+      <option value="Copied">Copied</option>
+    </select>
+    <select class="sort-select" id="sort-select" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text-primary); font-size:0.875rem; font-family:inherit;">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="risk_desc">Highest risk</option>
+      <option value="sim_desc">Highest similarity</option>
+    </select>
+    <span id="count-label" style="font-size:0.85rem; color:var(--text-muted); white-space:nowrap;"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrapper card" id="table-wrapper">
+    <table id="history-table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Status</th>
+          <th>Similarity</th>
+          <th>Risk Score</th>
+          <th>Platform</th>
+          <th>Scanned</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { getAllScans, riskColor, riskLabel, formatDate } from './js/api.js';
+
+const PAGE_SIZE = 20;
+let allScans = [];
+let filtered = [];
+let currentPage = 1;
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function statusColor(s) {
+  if (s === 'Copied') return 'var(--red)';
+  if (s === 'Suspicious') return 'var(--yellow)';
+  return 'var(--green)';
+}
+
+function statusClass(s) {
+  if (s === 'Copied') return 'copied';
+  if (s === 'Suspicious') return 'suspicious';
+  return 'original';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+
+  document.getElementById('count-label').textContent =
+    `${filtered.length} scan${filtered.length !== 1 ? 's' : ''}`;
+
+  if (page.length === 0) {
+    tbody.innerHTML = `
+      <tr><td colspan="7" style="text-align:center; padding:48px; color:var(--text-muted);">
+        No scans match the current filters.
+      </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = page.map(s => {
+    const risk = s.risk_score || 0;
+    const sim  = s.similarity || 0;
+    const rc   = riskColor(risk);
+    const sc   = statusClass(s.status);
+    return `
+    <tr class="${s.status === 'Copied' ? 'row-violation' : ''}">
+      <td>
+        <div style="font-weight:600; font-size:0.875rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.filename}">${s.filename}</div>
+        ${s.source_url ? `<div style="font-size:0.72rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px;" title="${s.source_url}">${s.source_url}</div>` : ''}
+      </td>
+      <td><span class="badge badge-${sc}">${s.status}</span></td>
+      <td style="color:${rc}; font-weight:700;">${sim.toFixed(1)}%</td>
+      <td style="color:${rc}; font-weight:700;">${risk.toFixed(1)}</td>
+      <td style="color:var(--text-secondary); font-size:0.85rem;">${s.platform || '—'}</td>
+      <td style="color:var(--text-muted); font-size:0.82rem; white-space:nowrap;">${formatDate(s.timestamp)}</td>
+      <td>
+        ${s.status === 'Copied' ? `<a href="legal.html" class="btn btn-danger btn-sm" onclick="setLegal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Notice</a>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>← Prev</button>`;
+  for (let i = 1; i <= Math.min(totalPages, 7); i++) {
+    html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  if (totalPages > 7) html += `<span style="color:var(--text-muted)">… ${totalPages}</span>`;
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next →</button>`;
+  pg.innerHTML = html;
+}
+
+window.goPage = (p) => {
+  const total = Math.ceil(filtered.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(p, total));
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.setLegal = (scan) => {
+  sessionStorage.setItem('legalContext', JSON.stringify({
+    asset_id: scan.asset_id,
+    filename: scan.filename,
+    similarity: scan.similarity,
+    status: scan.status,
+    risk_score: scan.risk_score,
+    source_url: scan.source_url || '',
+  }));
+};
+
+function applyFiltersAndSort() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const statusF = document.getElementById('status-filter').value;
+  const sortV   = document.getElementById('sort-select').value;
+
+  let result = [...allScans];
+  if (q) result = result.filter(s => s.filename?.toLowerCase().includes(q) || s.platform?.toLowerCase().includes(q));
+  if (statusF !== 'all') result = result.filter(s => s.status === statusF);
+
+  if (sortV === 'oldest')   result.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+  else if (sortV === 'risk_desc') result.sort((a,b) => (b.risk_score||0) - (a.risk_score||0));
+  else if (sortV === 'sim_desc')  result.sort((a,b) => (b.similarity||0) - (a.similarity||0));
+  else result.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  filtered = result;
+  currentPage = 1;
+  renderTable();
+}
+
+async function load() {
+  try {
+    allScans = await getAllScans();
+    applyFiltersAndSort();
+  } catch (err) {
+    showToast('error', 'Failed to load history: ' + err.message);
+    document.getElementById('table-body').innerHTML = `
+      <tr><td colspan="7" style="text-align:center; padding:48px; color:var(--text-muted);">
+        Could not connect to the API. Make sure the backend is running on port 8000.
+      </td></tr>`;
+  }
+}
+
+document.getElementById('search-input').addEventListener('input', applyFiltersAndSort);
+document.getElementById('status-filter').addEventListener('change', applyFiltersAndSort);
+document.getElementById('sort-select').addEventListener('change', applyFiltersAndSort);
+
+load();
+</script>
+</body>
+</html>

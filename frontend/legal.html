@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Legal Notice Generator — GuardSport AI</title>
+  <meta name="description" content="Generate professional DMCA takedown notices for unauthorized sports media usage with one click."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <style>
+    .legal-layout {
+      max-width: 900px; margin: 0 auto;
+      padding: 88px 24px 64px;
+    }
+
+    .legal-grid {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .legal-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Form Panel ──────────────────────────────────── */
+    .form-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      position: sticky; top: 80px;
+    }
+
+    .form-panel h3 { margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block; margin-bottom: 6px;
+      font-size: 0.8rem; font-weight: 600;
+      color: var(--text-secondary); letter-spacing: 0.3px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    /* Context banner (pre-filled from violations) */
+    .context-banner {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+      color: var(--red-light);
+    }
+    .context-banner strong { display: block; margin-bottom: 2px; }
+
+    /* ── Notice Output ────────────────────────────────── */
+    .notice-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .notice-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .notice-header h4 { font-size: 0.9rem; }
+
+    .notice-actions { display: flex; gap: 8px; }
+
+    .notice-textarea {
+      width: 100%;
+      min-height: 540px;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 20px;
+      font-family: 'Courier New', 'Monaco', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      resize: vertical;
+      display: block;
+    }
+
+    /* Empty notice state */
+    .notice-empty {
+      min-height: 400px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .notice-empty-icon { font-size: 3rem; opacity: 0.3; animation: float 3s ease-in-out infinite; }
+
+    /* ── DMCA Info Cards ─────────────────────────────── */
+    .dmca-info {
+      margin-top: 24px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .dmca-info-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+    }
+    .dmca-info-card .icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .dmca-info-card h5 { font-size: 0.8rem; margin-bottom: 3px; }
+    .dmca-info-card p  { font-size: 0.75rem; }
+
+    /* ── Generating Animation ────────────────────────── */
+    .generating-overlay {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 32px;
+      text-align: center;
+      min-height: 400px;
+      display: none;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+    }
+    .generating-overlay.active { display: flex; }
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lg6)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lg6" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html" class="active">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="legal-layout">
+  <div class="page-header">
+    <h1>Legal Notice Generator</h1>
+    <p>Generate professionally formatted DMCA takedown notices in seconds</p>
+  </div>
+
+  <div class="legal-grid">
+    <!-- Form Panel -->
+    <div class="form-panel">
+      <h3>Notice Details</h3>
+
+      <div id="context-banner" class="context-banner" style="display:none;">
+        <strong id="ctx-filename">—</strong>
+        <span id="ctx-stats"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="owner-name">Your Full Name / Organization *</label>
+        <input type="text" class="form-input" id="owner-name" placeholder="e.g. Real Madrid C.F." required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="infringing-url">Infringing URL *</label>
+        <input type="url" class="form-input" id="infringing-url" placeholder="https://example.com/stolen-content" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="contact-email">Contact Email (Optional)</label>
+        <input type="email" class="form-input" id="contact-email" placeholder="legal@yourorg.com"/>
+      </div>
+
+      <button class="btn btn-danger w-full" id="generate-btn" style="justify-content:center; margin-top:8px;">
+        Generate DMCA Notice
+      </button>
+
+      <div class="dmca-info">
+        <div class="dmca-info-card">
+          <div class="icon">📋</div>
+          <h5>17 U.S.C. § 512</h5>
+          <p>DMCA compliant</p>
+        </div>
+        <div class="dmca-info-card">
+          <div class="icon">⚡</div>
+          <h5>Instant</h5>
+          <p>Generated in &lt;1s</p>
+        </div>
+        <div class="dmca-info-card">
+          <div class="icon">✅</div>
+          <h5>Ready to Send</h5>
+          <p>Copy & submit directly</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notice Output Panel -->
+    <div class="notice-panel">
+      <div class="notice-header">
+        <h4>DMCA Takedown Notice</h4>
+        <div class="notice-actions" id="notice-actions" style="display:none;">
+          <button class="btn btn-sm btn-secondary" id="copy-btn">Copy</button>
+          <button class="btn btn-sm btn-success" id="download-btn">Download</button>
+        </div>
+      </div>
+
+      <!-- Generating loader -->
+      <div class="generating-overlay" id="generating-overlay">
+        <div class="scanning-ring" style="width:48px; height:48px; border-width:3px;"></div>
+        <p style="font-size:0.95rem; font-weight:600;">Generating Legal Notice<span class="dot-pulse"></span></p>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Formatting DMCA-compliant document</p>
+      </div>
+
+      <!-- Empty state -->
+      <div class="notice-empty" id="notice-empty">
+        <div class="notice-empty-icon">📄</div>
+        <h3>Your Notice Will Appear Here</h3>
+        <p>Fill in the form on the left and click<br/>"Generate DMCA Notice"</p>
+      </div>
+
+      <!-- Notice text area -->
+      <textarea class="notice-textarea" id="notice-output" style="display:none;" readonly spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { generateLegal } from './js/api.js';
+
+const toastCont = document.getElementById('toast-container');
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  toastCont.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Pre-fill from violations page context ───────────────────────────────────
+const legalCtx = sessionStorage.getItem('legalContext');
+if (legalCtx) {
+  try {
+    const ctx = JSON.parse(legalCtx);
+    const banner = document.getElementById('context-banner');
+    banner.style.display = 'block';
+    document.getElementById('ctx-filename').textContent = `${ctx.filename || 'Asset'}`;
+    document.getElementById('ctx-stats').textContent =
+      `${ctx.similarity?.toFixed(1) || 0}% similarity · Risk: ${ctx.risk_score?.toFixed(0) || 0}/100`;
+
+    if (ctx.source_url) {
+      document.getElementById('infringing-url').value = ctx.source_url;
+    }
+  } catch {}
+}
+
+// ── Generate ────────────────────────────────────────────────────────────────
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const owner = document.getElementById('owner-name').value.trim();
+  const url   = document.getElementById('infringing-url').value.trim();
+
+  if (!owner || !url) {
+    showToast('error', '⚠️ Please fill in owner name and infringing URL');
+    return;
+  }
+
+  // Show loader
+  document.getElementById('notice-empty').style.display = 'none';
+  document.getElementById('notice-output').style.display = 'none';
+  document.getElementById('notice-actions').style.display = 'none';
+  document.getElementById('generating-overlay').classList.add('active');
+
+  let assetId = null;
+  if (legalCtx) {
+    try { assetId = JSON.parse(legalCtx).asset_id; } catch {}
+  }
+
+  try {
+    await new Promise(r => setTimeout(r, 800)); // UX: small artificial delay
+    const res = await generateLegal({ ownerName: owner, infringingUrl: url, assetId });
+
+    document.getElementById('generating-overlay').classList.remove('active');
+    document.getElementById('notice-output').style.display = 'block';
+    document.getElementById('notice-output').value = res.notice;
+    document.getElementById('notice-actions').style.display = 'flex';
+
+    showToast('success', '✅ DMCA notice generated successfully!');
+  } catch (err) {
+    document.getElementById('generating-overlay').classList.remove('active');
+    document.getElementById('notice-empty').style.display = 'flex';
+    showToast('error', 'Error: ' + err.message);
+  }
+});
+
+// ── Copy ─────────────────────────────────────────────────────────────────────
+document.getElementById('copy-btn').addEventListener('click', async () => {
+  const text = document.getElementById('notice-output').value;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('success', 'Copied to clipboard!');
+  } catch {
+    document.getElementById('notice-output').select();
+    document.execCommand('copy');
+    showToast('success', 'Copied!');
+  }
+});
+
+// ── Download ─────────────────────────────────────────────────────────────────
+document.getElementById('download-btn').addEventListener('click', () => {
+  const text = document.getElementById('notice-output').value;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `DMCA_Notice_${Date.now()}.txt`;
+  a.click();
+  showToast('info', 'Notice downloaded!');
+});
+</script>
+</body>
+</html>

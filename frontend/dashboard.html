@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — GuardSport AI</title>
+  <meta name="description" content="Sports media protection dashboard showing total assets, violations, average risk score, and recent scan activity."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <style>
+    .recent-scans-table { border-radius: var(--radius); overflow: hidden; }
+
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .activity-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .activity-item:hover { background: rgba(255,255,255,0.04); }
+
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-original  { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+    .dot-suspicious{ background: var(--yellow); box-shadow: 0 0 6px var(--yellow-glow); }
+    .dot-copied    { background: var(--red);   box-shadow: 0 0 6px var(--red-glow); }
+
+    .activity-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-risk { font-weight: 700; font-size: 0.8rem; }
+    .activity-time { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Skeleton */
+    .skel { height: 20px; border-radius: 6px; margin: 4px 0; }
+    .skel-sm { height: 14px; width: 60%; }
+    .skel-lg { height: 40px; }
+
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lg4)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lg4" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html" class="active">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h1>Dashboard</h1>
+      <p>Real-time overview of your protected sports media assets</p>
+    </div>
+    <a href="upload.html" class="btn btn-primary" id="dash-scan-btn">
+      + Scan New Media
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="metric-grid" id="kpi-grid">
+    <!-- Skeleton loaders -->
+    <div class="metric-card">
+      <div class="skeleton skel skel-lg mb-8"></div>
+      <div class="skeleton skel skel-sm"></div>
+    </div>
+    <div class="metric-card">
+      <div class="skeleton skel skel-lg mb-8"></div>
+      <div class="skeleton skel skel-sm"></div>
+    </div>
+    <div class="metric-card">
+      <div class="skeleton skel skel-lg mb-8"></div>
+      <div class="skeleton skel skel-sm"></div>
+    </div>
+    <div class="metric-card">
+      <div class="skeleton skel skel-lg mb-8"></div>
+      <div class="skeleton skel skel-sm"></div>
+    </div>
+  </div>
+
+  <!-- Two-column layout -->
+  <div style="display:grid; grid-template-columns: 1fr 340px; gap:24px; align-items:start;" id="main-grid">
+
+    <!-- Recent Scans Table -->
+    <div class="card card-lg" id="scans-card">
+      <div class="section-header mb-16">
+        <div class="section-title">Recent Scans</div>
+        <a href="violations.html" class="btn btn-sm btn-secondary">View Violations</a>
+      </div>
+      <div id="scans-content">
+        <div class="skeleton skel mb-8" style="height:14px;"></div>
+        <div class="skeleton skel mb-8" style="height:14px; width:80%;"></div>
+        <div class="skeleton skel mb-8" style="height:14px; width:60%;"></div>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="card" id="activity-card">
+      <div class="section-header mb-16">
+        <div class="section-title">Recent Activity</div>
+      </div>
+      <div id="activity-content">
+        <div class="skeleton skel mb-8" style="height:48px; border-radius:8px;"></div>
+        <div class="skeleton skel mb-8" style="height:48px; border-radius:8px;"></div>
+        <div class="skeleton skel" style="height:48px; border-radius:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card mt-24">
+    <div class="section-header mb-16">
+      <div class="section-title">Quick Actions</div>
+    </div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <a href="upload.html" class="btn btn-primary" id="qa-upload">📁 Upload & Scan Media</a>
+      <a href="violations.html" class="btn btn-danger" id="qa-violations">View Violations</a>
+      <a href="legal.html" class="btn btn-secondary" id="qa-legal">Generate Legal Notice</a>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-top:24px;">
+    <!-- Scan Trend Chart -->
+    <div class="card" id="chart-card">
+      <div class="section-header mb-16">
+        <div class="section-title">Scan Trend — Last 7 Days</div>
+        <a href="history.html" style="font-size:0.8rem; color:var(--text-muted);">View all →</a>
+      </div>
+      <div style="position: relative; height: 200px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Platform Breakdown -->
+    <div class="card" id="platform-card">
+      <div class="section-header mb-16">
+        <div class="section-title">Violations by Platform</div>
+      </div>
+      <div style="position: relative; height: 150px;">
+        <canvas id="platformChart"></canvas>
+      </div>
+      <div id="platform-legend" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { getDashboardStats, getAllScans, statusClass, statusIcon, riskLabel, riskColor, formatDate } from './js/api.js';
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function countUp(el, end, suffix = '', duration = 1200) {
+  const startTime = performance.now();
+  function tick(now) {
+    const p = Math.min((now - startTime) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(end * ease) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+async function loadDashboard() {
+  try {
+    const [stats, scans] = await Promise.all([getDashboardStats(), getAllScans()]);
+
+    // ── KPI Cards ─────────────────────────────────────────────────────────────
+    const kpiGrid = document.getElementById('kpi-grid');
+    kpiGrid.innerHTML = `
+      <div class="metric-card fade-up fade-up-1">
+        <div class="metric-icon" style="background:rgba(59,130,246,0.15);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="metric-value" id="kpi-assets" style="color:var(--blue)">0</div>
+        <div class="metric-label">Total Assets Protected</div>
+      </div>
+      <div class="metric-card fade-up fade-up-2">
+        <div class="metric-icon" style="background:rgba(239,68,68,0.15);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="metric-value" id="kpi-violations" style="color:var(--red)">0</div>
+        <div class="metric-label">Violations Detected</div>
+        <div class="metric-trend" style="color:${stats.total_violations > 0 ? 'var(--red)' : 'var(--green)'}">
+          ${stats.total_violations > 0 ? '&#9650; Requires action' : '&#10003; All clear'}
+        </div>
+      </div>
+      <div class="metric-card fade-up fade-up-3">
+        <div class="metric-icon" style="background:rgba(245,158,11,0.15);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </div>
+        <div class="metric-value" id="kpi-risk" style="color:${riskColor(stats.avg_risk_score)}">0</div>
+        <div class="metric-label">Avg Risk Score</div>
+        <div class="metric-trend" style="color:${riskColor(stats.avg_risk_score)}">
+          ${riskLabel(stats.avg_risk_score)} overall
+        </div>
+      </div>
+      <div class="metric-card fade-up fade-up-4">
+        <div class="metric-icon" style="background:rgba(16,185,129,0.15);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="metric-value" id="kpi-scans" style="color:var(--green)">0</div>
+        <div class="metric-label">Total Scans Run</div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      countUp(document.getElementById('kpi-assets'), stats.total_assets);
+      countUp(document.getElementById('kpi-violations'), stats.total_violations);
+      countUp(document.getElementById('kpi-risk'), stats.avg_risk_score);
+      countUp(document.getElementById('kpi-scans'), scans.length);
+    }, 200);
+
+    // ── Recent Scans Table ─────────────────────────────────────────────────────
+    const scansContent = document.getElementById('scans-content');
+    if (scans.length === 0) {
+      scansContent.innerHTML = `
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3; margin-bottom:12px;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <h3>No scans yet</h3>
+          <p>Upload media to start scanning</p>
+          <a href="upload.html" class="btn btn-primary mt-16">Scan Now</a>
+        </div>`;
+    } else {
+      const rows = scans.slice(0, 10).map(s => {
+        const sc = statusClass(s.status);
+        const si = statusIcon(s.status);
+        const rc = riskColor(s.risk_score);
+        return `<tr>
+          <td><span class="badge badge-${sc}">${si} ${s.status}</span></td>
+          <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.filename}</td>
+          <td style="color:${rc}; font-weight:700;">${s.risk_score?.toFixed(1) || '0'}/100</td>
+          <td>${s.similarity?.toFixed(1) || '0'}%</td>
+          <td style="color:var(--text-muted); font-size:0.8rem;">${formatDate(s.timestamp)}</td>
+        </tr>`;
+      }).join('');
+      scansContent.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr>
+              <th>Status</th><th>File</th><th>Risk</th><th>Match %</th><th>Time</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── Activity Feed ─────────────────────────────────────────────────────────
+    const actContent = document.getElementById('activity-content');
+    const activity = stats.recent_activity || [];
+    if (activity.length === 0) {
+      actContent.innerHTML = `<div class="empty-state"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3; margin-bottom:8px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><p>No recent activity</p></div>`;
+    } else {
+      actContent.innerHTML = activity.map(a => {
+        const sc = statusClass(a.status);
+        const dotClass = `dot-${sc}`;
+        return `<div class="activity-item">
+          <div class="activity-dot ${dotClass}"></div>
+          <div class="activity-name">${a.filename}</div>
+          <div class="activity-risk" style="color:${riskColor(a.risk_score)}">${a.risk_score?.toFixed(0)}pts</div>
+          <div class="activity-time">${formatDate(a.timestamp)}</div>
+        </div>`;
+      }).join('');
+    }
+
+  } catch (err) {
+    showToast('error', 'Failed to load dashboard: ' + err.message);
+    document.getElementById('scans-content').innerHTML = `
+      <div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.5" style="margin-bottom:12px; opacity:0.6;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <h3>Connection Error</h3>
+        <p>Could not reach the API server. Make sure the backend is running on port 8000.</p>
+      </div>`;
+  }
+}
+
+loadDashboard();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module">
+import { getAllScans } from './js/api.js';
+
+async function renderTrendChart() {
+  let scans = [];
+  try { scans = await getAllScans(); } catch { return; }
+
+  // Build last 7 days labels
+  const days = [];
+  const labelMap = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    const label = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    days.push({ key, label });
+    labelMap[key] = { original: 0, suspicious: 0, copied: 0 };
+  }
+
+  scans.forEach(s => {
+    const day = (s.timestamp || '').slice(0, 10);
+    if (labelMap[day]) {
+      const st = (s.status || '').toLowerCase();
+      if (st === 'original')   labelMap[day].original++;
+      else if (st === 'suspicious') labelMap[day].suspicious++;
+      else if (st === 'copied')    labelMap[day].copied++;
+    }
+  });
+
+  const labels   = days.map(d => d.label);
+  const origData = days.map(d => labelMap[d.key].original);
+  const suspData = days.map(d => labelMap[d.key].suspicious);
+  const copyData = days.map(d => labelMap[d.key].copied);
+
+  // If all zeros, add placeholder so chart renders
+  const allZero = origData.every(v=>v===0) && suspData.every(v=>v===0) && copyData.every(v=>v===0);
+  if (allZero) {
+    document.getElementById('chart-card').innerHTML += `
+      <p style="text-align:center; color:var(--text-muted); font-size:0.85rem; margin-top:8px; padding-bottom:16px;">
+        No scans in the last 7 days. Upload media to populate this chart.
+      </p>`;
+  }
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Original',   data: origData, backgroundColor: 'rgba(16,185,129,0.7)',  borderRadius: 4 },
+        { label: 'Suspicious', data: suspData, backgroundColor: 'rgba(245,158,11,0.7)',  borderRadius: 4 },
+        { label: 'Copied',     data: copyData, backgroundColor: 'rgba(239,68,68,0.8)',   borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94A3B8', font: { size: 12 } } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#64748B' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { stacked: true, ticks: { color: '#64748B', precision: 0 }, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+renderTrendChart();
+
+async function renderPlatformChart() {
+  try {
+    const data = await fetch('http://localhost:8000/dashboard/platform-breakdown').then(r => r.json());
+    if (!data || data.length === 0) {
+      document.getElementById('platform-card').innerHTML +=
+        '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:12px;">No violation data yet</p>';
+      return;
+    }
+
+    const COLORS = ['rgba(239,68,68,0.8)', 'rgba(245,158,11,0.75)', 'rgba(59,130,246,0.8)', 'rgba(139,92,246,0.8)', 'rgba(16,185,129,0.75)', 'rgba(99,102,241,0.8)'];
+    const labels = data.map(d => d.platform || 'Unknown');
+    const counts = data.map(d => d.count);
+    const colors = data.map((_, i) => COLORS[i % COLORS.length]);
+
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const textColor = isDark ? '#9CA3AF' : '#5F6368';
+
+    const ctx = document.getElementById('platformChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.parsed} violation${ctx.parsed !== 1 ? 's' : ''}`,
+            },
+          },
+        },
+      },
+    });
+
+    // Custom legend
+    const legend = document.getElementById('platform-legend');
+    legend.innerHTML = data.map((d, i) => `
+      <span style="display:flex; align-items:center; gap:5px; font-size:0.72rem; color:var(--text-secondary);">
+        <span style="width:9px; height:9px; border-radius:50%; background:${colors[i]}; flex-shrink:0;"></span>
+        ${d.platform || 'Unknown'} (${d.count})
+      </span>`).join('');
+  } catch {}
+}
+
+renderPlatformChart();
+</script>
+</body>
+</html>
+

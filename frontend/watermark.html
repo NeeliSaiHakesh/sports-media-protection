@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Watermark Tool — GuardSport AI</title>
+  <meta name="description" content="Embed a professional visible copyright watermark into your sports media images to protect ownership."/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/animations.css"/>
+  <script src="js/theme.js"></script>
+  <style>
+    .wm-layout { max-width: 840px; margin: 0 auto; padding: 88px 24px 64px; }
+
+    .wm-drop {
+      border: 2px dashed rgba(59,130,246,0.4);
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      min-height: 220px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; cursor: pointer;
+      transition: all 0.25s; margin-bottom: 24px;
+    }
+    .wm-drop:hover, .wm-drop.dragover {
+      border-color: var(--blue); border-style: solid;
+      background: rgba(59,130,246,0.05);
+    }
+    .wm-drop-text { text-align: center; }
+    .wm-drop-text h3 { margin-bottom: 4px; font-size: 1.1rem; }
+
+    .preview-compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .preview-compare { grid-template-columns: 1fr; } }
+
+    .compare-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .compare-label {
+      padding: 10px 14px;
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-img {
+      width: 100%; height: 260px; object-fit: contain;
+      display: block; background: rgba(0,0,0,0.08);
+    }
+    [data-theme="light"] .compare-img { background: rgba(0,0,0,0.04); }
+
+    .wm-options {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px; margin-bottom: 24px;
+    }
+    .options-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .options-3 { grid-template-columns: 1fr; } }
+
+    .result-actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: center; justify-content: center;
+      padding: 24px; text-align: center;
+    }
+
+    .processing-state {
+      text-align: center; padding: 48px 24px;
+      display: none;
+    }
+    .processing-ring {
+      width: 56px; height: 56px;
+      border: 3px solid rgba(59,130,246,0.15);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#lgWm)"/><path d="M14 6L8 10V18L14 22L20 18V10L14 6Z" fill="white" opacity="0.9"/><path d="M14 10L11 12V16L14 18L17 16V12L14 10Z" fill="#0A0E1A"/><defs><linearGradient id="lgWm" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs></svg>
+      GuardSport AI <span class="logo-badge">BETA</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="library.html">Library</a></li>
+      <li><a href="violations.html">Violations</a></li>
+      <li><a href="legal.html">Legal Notices</a></li>
+      <li><a href="upload.html" class="nav-cta">Scan Media</a></li>
+    </ul>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme"></button>
+  </div>
+</nav>
+
+<div class="wm-layout">
+  <div class="page-header">
+    <h1>Watermark Tool</h1>
+    <p>Embed a copyright watermark into your image to establish provenance and deter unauthorized use</p>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="wm-drop" id="wm-drop">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <div class="wm-drop-text">
+      <h3>Drop image here</h3>
+      <p>JPEG, PNG, WebP supported</p>
+    </div>
+    <button class="drop-zone-browse" id="wm-browse">Browse</button>
+    <input type="file" id="wm-input" accept="image/jpeg,image/png,image/webp" style="display:none;"/>
+  </div>
+
+  <!-- Options -->
+  <div class="wm-options" id="wm-options" style="display:none;">
+    <h4 style="margin-bottom:16px;">Watermark Options</h4>
+    <div class="options-3">
+      <div class="form-group">
+        <label class="form-label" for="owner-name">Organization Name</label>
+        <input type="text" class="form-input" id="owner-name" placeholder="Your Company Name" value="GuardSport AI"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wm-style">Style</label>
+        <select class="form-input" id="wm-style">
+          <option value="visible">Corner badge (visible)</option>
+          <option value="tiled">Diagonal tiled (full coverage)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="wm-position">Position</label>
+        <select class="form-input" id="wm-position">
+          <option value="bottom-right">Bottom right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+          <option value="center">Center</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div id="submit-area" style="display:none; margin-bottom:24px;">
+    <button class="btn btn-primary btn-lg w-full" id="apply-btn">Apply Watermark</button>
+  </div>
+
+  <!-- Processing -->
+  <div class="processing-state" id="processing-state">
+    <div class="processing-ring"></div>
+    <p>Applying watermark…</p>
+  </div>
+
+  <!-- Preview Compare -->
+  <div class="preview-compare" id="preview-compare" style="display:none;">
+    <div class="compare-panel">
+      <div class="compare-label">Original</div>
+      <img class="compare-img" id="original-img" src="" alt="Original image"/>
+    </div>
+    <div class="compare-panel">
+      <div class="compare-label">Watermarked</div>
+      <img class="compare-img" id="watermarked-img" src="" alt="Watermarked image"/>
+    </div>
+  </div>
+
+  <!-- Result Actions -->
+  <div class="result-actions" id="result-actions" style="display:none;">
+    <a class="btn btn-primary btn-lg" id="download-btn" download>Download Watermarked Image</a>
+    <button class="btn btn-secondary" id="reset-btn">Watermark Another</button>
+    <a href="upload.html" class="btn btn-secondary">Scan for Violations</a>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = 'http://localhost:8000';
+let selectedFile = null;
+let originalUrl = null;
+
+const dropEl   = document.getElementById('wm-drop');
+const inputEl  = document.getElementById('wm-input');
+const browseEl = document.getElementById('wm-browse');
+const optionsEl   = document.getElementById('wm-options');
+const submitArea  = document.getElementById('submit-area');
+const applyBtn    = document.getElementById('apply-btn');
+const processingEl = document.getElementById('processing-state');
+const compareEl   = document.getElementById('preview-compare');
+const actionsEl   = document.getElementById('result-actions');
+const toastCont   = document.getElementById('toast-container');
+
+function showToast(type, msg) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  toastCont.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function setFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('error', 'Please select a valid image file.');
+    return;
+  }
+  selectedFile = file;
+  originalUrl = URL.createObjectURL(file);
+  document.getElementById('original-img').src = originalUrl;
+
+  // Show options
+  optionsEl.style.display = 'block';
+  submitArea.style.display = 'block';
+  compareEl.style.display = 'none';
+  actionsEl.style.display = 'none';
+  processingEl.style.display = 'none';
+
+  // Update drop zone
+  dropEl.style.opacity = '0.6';
+}
+
+browseEl.addEventListener('click', () => inputEl.click());
+dropEl.addEventListener('click', (e) => { if (e.target !== browseEl) inputEl.click(); });
+inputEl.addEventListener('change', () => {
+  if (inputEl.files[0]) setFile(inputEl.files[0]);
+});
+
+dropEl.addEventListener('dragover', (e) => {
+  e.preventDefault(); dropEl.classList.add('dragover');
+});
+dropEl.addEventListener('dragleave', () => dropEl.classList.remove('dragover'));
+dropEl.addEventListener('drop', (e) => {
+  e.preventDefault(); dropEl.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+
+applyBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+
+  const ownerName = document.getElementById('owner-name').value.trim() || 'GuardSport AI';
+  const style     = document.getElementById('wm-style').value;
+  const position  = document.getElementById('wm-position').value;
+
+  submitArea.style.display = 'none';
+  processingEl.style.display = 'block';
+
+  try {
+    const form = new FormData();
+    form.append('file', selectedFile);
+    form.append('owner_name', ownerName);
+    form.append('style', style);
+    form.append('position', position);
+
+    const res = await fetch(`${API}/watermark`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Watermark failed');
+    }
+
+    const blob = await res.blob();
+    const watermarkedUrl = URL.createObjectURL(blob);
+
+    processingEl.style.display = 'none';
+    compareEl.style.display = 'grid';
+    actionsEl.style.display = 'flex';
+
+    document.getElementById('watermarked-img').src = watermarkedUrl;
+
+    const dlBtn = document.getElementById('download-btn');
+    dlBtn.href = watermarkedUrl;
+    dlBtn.download = `${selectedFile.name.replace(/\.[^.]+$/, '')}_watermarked.jpg`;
+
+    showToast('success', 'Watermark applied successfully.');
+  } catch (err) {
+    processingEl.style.display = 'none';
+    submitArea.style.display = 'block';
+    showToast('error', err.message);
+  }
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  selectedFile = null;
+  originalUrl = null;
+  inputEl.value = '';
+  dropEl.style.opacity = '1';
+  optionsEl.style.display = 'none';
+  submitArea.style.display = 'none';
+  compareEl.style.display = 'none';
+  actionsEl.style.display = 'none';
+  processingEl.style.display = 'none';
+});
+</script>
+</body>
+</html>
