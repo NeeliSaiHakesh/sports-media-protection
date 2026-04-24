@@ -258,6 +258,7 @@
     .overlay-step.done  .step-dot  { background: var(--green); }
   </style>
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
 </head>
 <body>
 
@@ -408,11 +409,17 @@
       <div class="overlay-step" id="step-hash">
         <div class="step-dot"></div> Generating perceptual fingerprint
       </div>
+      <div class="overlay-step" id="step-clip">
+        <div class="step-dot"></div> Running CLIP semantic analysis
+      </div>
+      <div class="overlay-step" id="step-dino">
+        <div class="step-dot"></div> DINOv2 visual structure check
+      </div>
       <div class="overlay-step" id="step-compare">
         <div class="step-dot"></div> Comparing against reference database
       </div>
       <div class="overlay-step" id="step-classify">
-        <div class="step-dot"></div> Classifying and scoring risk
+        <div class="step-dot"></div> Scoring & classifying risk
       </div>
       <div class="overlay-step" id="step-result">
         <div class="step-dot"></div> Generating final verdict
@@ -427,15 +434,20 @@
 <script type="module">
   import { uploadAsset, scanUrl } from './js/api.js';
 
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
-  const browseBtn = document.getElementById('browse-btn');
-  const previewGrid = document.getElementById('preview-grid');
-  const scanBtn = document.getElementById('scan-btn');
-  const fileCountEl = document.getElementById('file-count');
-  const overlay = document.getElementById('scan-overlay');
-  const toastCont = document.getElementById('toast-container');
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const browseBtn  = document.getElementById('browse-btn');
+  const previewGrid= document.getElementById('preview-grid');
+  const scanBtn    = document.getElementById('scan-btn');
+  const fileCountEl= document.getElementById('file-count');
+  const overlay    = document.getElementById('scan-overlay');
   const dropScanLine = document.getElementById('drop-scan-line');
+
+  // Progress elements
+  const uploadProgress = document.getElementById('upload-progress');
+  const progressFill   = document.getElementById('progress-fill');
+  const progressText   = document.getElementById('progress-text');
+  const progressPct    = document.getElementById('progress-pct');
 
   let selectedFiles = [];
 
@@ -461,7 +473,9 @@
   fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
 
   function addFiles(files) {
-    const valid = files.filter(f => f.type.startsWith('image/'));
+    const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 20 * 1024 * 1024);
+    const oversized = files.length - valid.length;
+    if (oversized > 0) showToast(`${oversized} file(s) skipped (>20MB or non-image)`, 'warning');
     selectedFiles = [...selectedFiles, ...valid];
     renderPreviews();
   }
@@ -493,71 +507,110 @@
     scanBtn.disabled = n === 0;
   }
 
-  // ── Scanning ───────────────────────────────────────────
-  const STEPS = ['step-normalize','step-hash','step-compare','step-classify','step-result'];
+  // ── Multi-stage Step Animation ────────────────────────────
+  const STEPS = ['step-normalize','step-hash','step-clip','step-dino','step-compare','step-classify','step-result'];
+  const STEP_MS = [350, 400, 900, 700, 400, 350, 300]; // realistic timing per stage
 
   function setStep(idx) {
     STEPS.forEach((id, i) => {
       const el = document.getElementById(id);
+      if (!el) return;
       el.classList.remove('active', 'done');
       if (i < idx) el.classList.add('done');
       else if (i === idx) el.classList.add('active');
     });
   }
 
-  async function animateSteps() {
-    for (let i = 0; i < STEPS.length; i++) {
-      setStep(i);
-      await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
-    }
+  async function animateSteps(uploadPromise) {
+    // Run steps concurrently with upload — steps complete together
+    let stepIdx = 0;
+    const advance = async () => {
+      for (stepIdx = 0; stepIdx < STEPS.length; stepIdx++) {
+        setStep(stepIdx);
+        await new Promise(r => setTimeout(r, STEP_MS[stepIdx]));
+      }
+    };
+    const [result] = await Promise.all([uploadPromise, advance()]);
+    setStep(STEPS.length); // mark all done
+    return result;
   }
 
+  // Overall batch progress bar
+  function setBatchProgress(done, total) {
+    const pct = Math.round((done / total) * 100);
+    progressFill.style.width = pct + '%';
+    progressFill.style.background = pct === 100 ? 'var(--green)' : 'var(--blue)';
+    progressText.textContent = `Scanning file ${done} of ${total}`;
+    progressPct.textContent  = pct + '%';
+    uploadProgress.classList.add('visible');
+  }
+
+  // ── Batch File Scan ──────────────────────────────────────
   scanBtn.addEventListener('click', async () => {
     if (!selectedFiles.length) return;
     const platform  = document.getElementById('platform-select').value;
     const sourceUrl = document.getElementById('source-url').value;
     const algorithm = document.getElementById('algo-select').value;
 
-    overlay.classList.add('active');
-    document.getElementById('overlay-file').textContent = selectedFiles[0].name;
-    const stepsPromise = animateSteps();
+    scanBtn.disabled = true;
+    const results = [];
+    const total   = selectedFiles.length;
 
-    try {
-      // Upload first file (demo flow: one at a time, show result)
-      const file = selectedFiles[0];
-      const [result] = await Promise.all([
-        uploadAsset(file, sourceUrl, platform, algorithm),
-        stepsPromise,
-      ]);
+    for (let i = 0; i < total; i++) {
+      const file = selectedFiles[i];
+      setBatchProgress(i + 1, total);
 
-      overlay.classList.remove('active');
+      overlay.classList.add('active');
+      document.getElementById('overlay-title').innerHTML =
+        `Analyzing ${total > 1 ? `(${i+1}/${total}) ` : ''}Media<span class="dot-pulse"></span>`;
+      document.getElementById('overlay-file').textContent = file.name;
 
-      // For multiple files: redirect to results with the first result
-      sessionStorage.setItem('scanResult', JSON.stringify({
-        ...result,
-        fileName: file.name,
-        previewUrl: URL.createObjectURL(file),
-      }));
-      window.location.href = 'results.html';
+      STEPS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active', 'done');
+      });
 
-    } catch (err) {
-      overlay.classList.remove('active');
-      showToast('error', '⚠️ ' + err.message);
+      try {
+        const result = await animateSteps(uploadAsset(file, sourceUrl, platform, algorithm));
+        results.push({
+          ...result,
+          fileName: file.name,
+          previewUrl: URL.createObjectURL(file),
+        });
+      } catch (err) {
+        showToast(`Failed: ${file.name} — ${err.message}`, 'error');
+      }
     }
+
+    overlay.classList.remove('active');
+    uploadProgress.classList.remove('visible');
+    scanBtn.disabled = false;
+
+    if (!results.length) {
+      showToast('All scans failed. Check connection.', 'error');
+      return;
+    }
+
+    // Show summary toast for batch
+    if (total > 1) {
+      const violations = results.filter(r => r.status === 'Copied').length;
+      showToast(
+        `Scanned ${results.length} image${results.length > 1 ? 's' : ''}. ${violations} violation${violations !== 1 ? 's' : ''} detected.`,
+        violations > 0 ? 'error' : 'success'
+      );
+      // Short delay so user can read the toast before redirect
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    // Store all results, redirect with first (or highest-risk)
+    const sorted = [...results].sort((a,b) => (b.risk_score||0) - (a.risk_score||0));
+    sessionStorage.setItem('scanResult', JSON.stringify(sorted[0]));
+    sessionStorage.setItem('scanBatch',  JSON.stringify(results));
+    window.location.href = 'results.html';
   });
 
-  function showToast(type, msg) {
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.textContent = msg;
-    toastCont.appendChild(t);
-    setTimeout(() => t.remove(), 3200);
-  }
-
-  // ── Tab Switcher ──────────────────────────────────────────
-  const FILE_PANEL = document.querySelector('.drop-zone').parentElement;
-  const urlPanel   = document.getElementById('url-panel');
-  const optPanel   = document.getElementById('options-panel');
+  // ── Tab Switcher ─────────────────────────────────────────
+  const urlPanel = document.getElementById('url-panel');
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -585,34 +638,42 @@
       }
     });
   });
-  // Init active tab style
   document.getElementById('tab-file').style.borderBottomColor = 'var(--blue)';
   document.getElementById('tab-file').style.color = 'var(--text-primary)';
 
   // ── URL Scanner ──────────────────────────────────────────
-  const urlInput  = document.getElementById('image-url-input');
+  const urlInput   = document.getElementById('image-url-input');
   const scanUrlBtn = document.getElementById('scan-url-btn');
-  const urlCount  = document.getElementById('url-count');
+  const urlCount   = document.getElementById('url-count');
 
   urlInput.addEventListener('input', () => {
     const v = urlInput.value.trim();
     const valid = v.startsWith('http') && v.length > 12;
     scanUrlBtn.disabled = !valid;
-    urlCount.textContent = valid ? 'Ready to scan' : 'Enter an image URL above';
+    urlCount.textContent = valid ? '✓ URL ready to scan' : 'Enter a direct image URL';
   });
 
   scanUrlBtn.addEventListener('click', async () => {
     const imgUrl    = urlInput.value.trim();
     const platform  = document.getElementById('platform-select').value;
-    const sourceUrl = document.getElementById('source-url').value;
     const algorithm = document.getElementById('algo-select').value;
     if (!imgUrl) return;
 
+    scanUrlBtn.disabled = true;
     overlay.classList.add('active');
-    document.getElementById('overlay-file').textContent = imgUrl.slice(0, 60);
-    const stepsPromise = animateSteps();
+    document.getElementById('overlay-title').innerHTML = 'Scanning URL<span class="dot-pulse"></span>';
+    document.getElementById('overlay-file').textContent = imgUrl.slice(0, 72);
+    STEPS.forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active','done'); });
+
     try {
-      const [result] = await Promise.all([scanUrl(imgUrl, sourceUrl, platform, algorithm), stepsPromise]);
+      const fd = new FormData();
+      fd.append('image_url', imgUrl);
+      fd.append('platform', platform);
+      fd.append('algorithm', algorithm);
+      const result = await animateSteps(
+        fetch('http://localhost:8000/upload-url', { method:'POST', body:fd })
+          .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      );
       overlay.classList.remove('active');
       sessionStorage.setItem('scanResult', JSON.stringify({
         ...result,
@@ -622,27 +683,28 @@
       window.location.href = 'results.html';
     } catch (err) {
       overlay.classList.remove('active');
-      showToast('error', err.message);
+      scanUrlBtn.disabled = false;
+      showToast('URL scan failed: ' + err.message, 'error');
     }
   });
 
   // ── Demo Mode ─────────────────────────────────────────────
   document.getElementById('demo-btn').addEventListener('click', async () => {
-    showToast('info', 'Loading demo image…');
+    showToast('Loading demo image…', 'info');
     try {
-      // Fetch reference assets from the dedicated endpoint
       const assets = await fetch('http://localhost:8000/assets/reference').then(r => r.json());
-      if (!assets.length) { showToast('error', 'No reference assets found for demo.'); return; }
+      if (!assets.length) { showToast('No reference assets found for demo.', 'error'); return; }
       const ref = assets[Math.floor(Math.random() * assets.length)];
       const imgBlob = await fetch(`http://localhost:8000/asset-image/${ref.id}`).then(r => r.blob());
       const demoFile = new File([imgBlob], `demo_${ref.filename}`, { type: imgBlob.type || 'image/jpeg' });
       document.getElementById('platform-select').value = 'YouTube';
       addFiles([demoFile]);
-      showToast('success', 'Demo image loaded. Click Analyze Media to run!');
+      showToast('Demo image loaded! Click Analyze Media to run.', 'success');
     } catch (err) {
-      showToast('error', 'Demo failed: ' + err.message);
+      showToast('Demo failed: ' + err.message, 'error');
     }
   });
 </script>
 </body>
 </html>
+

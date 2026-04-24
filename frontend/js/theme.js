@@ -18,7 +18,7 @@ const LABELS = {
 };
 
 function getStored() {
-  try { return localStorage.getItem('gs-theme') || 'system'; } catch { return 'system'; }
+  try { return localStorage.getItem('gs-theme') || 'dark'; } catch { return 'dark'; }
 }
 
 function applyTheme(pref) {

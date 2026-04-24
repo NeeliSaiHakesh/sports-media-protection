@@ -26,7 +26,7 @@ GuardSport AI is a full-stack SaaS platform that:
 | Frontend | HTML5, CSS3, Vanilla JS (ES Modules) |
 | Backend | FastAPI (Python 3.9+) |
 | Database | SQLite (via aiosqlite) |
-| AI Engine | Pillow + imagehash (perceptual hashing) |
+| AI Engine | CLIP ViT-B/32 + DINOv2-small + imagehash (ensemble: 50% CLIP + 30% DINO + 20% hash) |
 | Charts | Chart.js 4.x |
 | Serving | Python HTTP server (dev) |
 
@@ -42,7 +42,7 @@ GuardSport AI is a full-stack SaaS platform that:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/guardsport-ai.git
+git clone https://github.com/<your-username>/guardsport-ai.git
 cd guardsport-ai/sports-media-protection
 
 # Install backend dependencies
@@ -84,6 +84,7 @@ sports-media-protection/
 │   │   └── animations.css
 │   └── js/
 │       ├── api.js        # API wrapper
+│       ├── toast.js      # Toast notification system
 │       └── theme.js      # Chrome-style theme management
 ├── start.sh              # One-command startup script
 ├── docker-compose.yml

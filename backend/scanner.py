@@ -20,6 +20,7 @@ from fingerprint import (
 )
 from ai_engine import (
     generate_embedding,
+    generate_dino_embedding,
     cosine_similarity,
     hybrid_similarity,
     embedding_to_json,
@@ -111,10 +112,12 @@ async def scan_asset(asset_id: int) -> ScanResult:
         target_platform = target["platform"] or "Unknown"
         target_path     = target["file_path"]
 
-        # Generate / fetch CLIP embedding for target
-        target_emb = None
+        # Generate / fetch CLIP + DINO embeddings for target
+        target_emb      = None
+        target_dino_emb = None
         if ai_on:
-            target_emb = await _get_or_generate_embedding(db, asset_id, target_path)
+            target_emb      = await _get_or_generate_embedding(db, asset_id, target_path)
+            target_dino_emb = generate_dino_embedding(target_path)
 
         # Load all OTHER assets as reference pool
         cur = await db.execute(
@@ -146,9 +149,16 @@ async def scan_asset(asset_id: int) -> ScanResult:
                 if cand_emb:
                     clip_sim = cosine_similarity(target_emb, cand_emb)
 
+            # ── DINOv2 similarity ─────────────────────────────────────────────
+            dino_sim = 0.0
+            if ai_on and target_dino_emb:
+                cand_dino = generate_dino_embedding(row["file_path"])
+                if cand_dino:
+                    dino_sim = cosine_similarity(target_dino_emb, cand_dino)
+
             # ── Hybrid score ─────────────────────────────────────────────────
             if ai_on and clip_sim > 0:
-                final_sim = hybrid_similarity(clip_sim, hash_sim)
+                final_sim = hybrid_similarity(clip_sim, hash_sim, dino_sim)
             else:
                 final_sim = hash_sim
 

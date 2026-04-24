@@ -26,7 +26,12 @@ from fingerprint import (
     hash_distance,
     similarity_percentage,
 )
-from ai_engine import get_status as ai_get_status, _try_load_clip
+from ai_engine import (
+    get_status as ai_get_status,
+    _try_load_clip,
+    _try_load_dino,
+    generate_gradcam_heatmap,
+)
 from legal import generate_dmca
 from scanner import scan_asset
 from watermark import extract_exif, visible_watermark, tiled_watermark
@@ -58,6 +63,8 @@ async def startup():
     import asyncio
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _try_load_clip)
+    loop.run_in_executor(None, _try_load_dino)
+
 
 
 async def seed_reference_db():
@@ -121,8 +128,47 @@ async def health():
 
 @app.get("/ai/status")
 async def ai_status_endpoint():
-    """Return current AI engine status — model name, device, availability."""
+    """Return current AI engine status — CLIP + DINOv2, model names, device."""
     return ai_get_status()
+
+
+@app.get("/assets/{asset_id}/explain")
+async def explain_asset(asset_id: int):
+    """
+    Generate a GradCAM heatmap for the given asset.
+    Returns a base64 JPEG showing which regions triggered the AI match.
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT file_path, filename FROM assets WHERE id = ?", (asset_id,)
+        )
+        row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(404, "Asset not found")
+
+    file_path = row["file_path"]
+    if not Path(file_path).exists():
+        raise HTTPException(404, "Asset file not found on disk")
+
+    import asyncio
+    loop  = asyncio.get_event_loop()
+    heatmap = await loop.run_in_executor(None, generate_gradcam_heatmap, file_path)
+
+    if not heatmap:
+        raise HTTPException(503, "CLIP model not available for GradCAM")
+
+    return {
+        "asset_id": asset_id,
+        "filename": row["filename"],
+        "heatmap": heatmap,
+        "explanation": (
+            "Highlighted (red/orange) regions show where the CLIP neural network "
+            "focused attention when comparing this image to the reference database. "
+            "High-intensity areas contributed most to the similarity score."
+        ),
+    }
 
 
 @app.post("/upload")
@@ -236,19 +282,101 @@ async def direct_match(
 
 @app.get("/violations")
 async def get_violations():
-    """Return all scans classified as Copied, sorted by risk_score DESC."""
+    """Return all scans classified as Copied (excluding false positives), sorted by risk_score DESC."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             """SELECT s.*, a.filename, a.source_url, a.platform, a.created_at as asset_created
                FROM scans s
                JOIN assets a ON s.asset_id = a.id
-               WHERE s.status = 'Copied' AND a.is_reference = 0
+               WHERE s.status = 'Copied'
+                 AND a.is_reference = 0
+                 AND (s.is_false_positive IS NULL OR s.is_false_positive = 0)
                ORDER BY s.risk_score DESC""",
         )
         rows = await cur.fetchall()
-
     return [dict(r) for r in rows]
+
+
+@app.post("/scans/{scan_id}/false-positive")
+async def mark_false_positive(scan_id: int, reason: str = Form("")):
+    """Mark a scan as a false positive — removes it from violations."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE scans SET is_false_positive = 1, false_positive_reason = ? WHERE id = ?",
+            (reason, scan_id),
+        )
+        await db.commit()
+    return {"success": True, "scan_id": scan_id}
+
+
+@app.post("/upload-url")
+async def upload_from_url(
+    image_url: str = Form(...),
+    platform: str  = Form("Unknown"),
+    algorithm: str = Form("average"),
+):
+    """Download an image from a URL and run a full AI scan on it."""
+    import httpx, mimetypes
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client:
+            resp = await client.get(image_url, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+    except Exception as e:
+        raise HTTPException(400, f"Could not fetch URL: {e}")
+
+    content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if content_type not in allowed:
+        # Try to guess from URL
+        guessed, _ = mimetypes.guess_type(image_url.split("?")[0])
+        if guessed not in allowed:
+            raise HTTPException(400, f"URL does not point to a supported image (got {content_type})")
+        content_type = guessed
+
+    ext = {"image/jpeg": ".jpg", "image/png": ".png",
+           "image/webp": ".webp", "image/gif": ".gif"}.get(content_type, ".jpg")
+    safe_name = f"url_import_{random.randbytes(4).hex()}{ext}"
+    dest = UPLOAD_DIR / safe_name
+    dest.write_bytes(resp.content)
+
+    try:
+        img_hash = generate_hash(str(dest), algorithm=algorithm)
+    except Exception as e:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(500, f"Could not process image: {e}")
+
+    from watermark import extract_exif
+    exif_data = extract_exif(str(dest))
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            """INSERT INTO assets (filename, file_path, hash, source_url, platform)
+               VALUES (?, ?, ?, ?, ?)""",
+            (safe_name, str(dest), img_hash, image_url, platform),
+        )
+        await db.commit()
+        asset_id = cur.lastrowid
+
+    result = await scan_asset(asset_id)
+    return {
+        "asset_id": result.asset_id,
+        "filename": safe_name,
+        "source_url": image_url,
+        "status": result.status,
+        "similarity_percentage": result.similarity_percentage,
+        "ai_similarity": result.ai_similarity,
+        "hash_similarity": result.hash_similarity,
+        "ai_available": result.ai_available,
+        "ai_model": "CLIP ViT-B/32" if result.ai_available else None,
+        "confidence_score": result.confidence_score,
+        "number_of_matches": result.number_of_matches,
+        "top_match_source": result.top_match_source,
+        "risk_score": result.risk_score,
+        "top_matches": [asdict(m) for m in result.top_matches],
+        "algorithm": "CLIP + " + algorithm if result.ai_available else algorithm,
+        "exif": exif_data,
+    }
 
 
 @app.get("/scans")
@@ -294,8 +422,8 @@ async def get_reference_assets():
 
 
 @app.get("/dashboard/stats")
-async def dashboard_stats():
-    """Aggregate KPI statistics for the dashboard."""
+async def dashboard_stats(days: int = 30):
+    """Aggregate KPI statistics for the dashboard. Filter by days."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
 
@@ -307,33 +435,106 @@ async def dashboard_stats():
         cur = await db.execute(
             """SELECT COUNT(*) as cnt FROM scans s
                JOIN assets a ON s.asset_id = a.id
-               WHERE s.status = 'Copied' AND a.is_reference = 0"""
+               WHERE s.status = 'Copied' AND a.is_reference = 0
+                 AND (s.is_false_positive IS NULL OR s.is_false_positive = 0)
+                 AND s.timestamp >= datetime('now', '-' || ? || ' days')""",
+            (days,),
         )
         total_violations = (await cur.fetchone())["cnt"]
 
         cur = await db.execute(
             """SELECT AVG(s.risk_score) as avg_risk FROM scans s
                JOIN assets a ON s.asset_id = a.id
-               WHERE a.is_reference = 0"""
+               WHERE a.is_reference = 0
+                 AND s.timestamp >= datetime('now', '-' || ? || ' days')""",
+            (days,),
         )
         row = await cur.fetchone()
         avg_risk = round(row["avg_risk"] or 0.0, 1)
 
         cur = await db.execute(
-            """SELECT s.status, a.filename, s.risk_score, s.timestamp
+            """SELECT s.id, s.status, a.filename, s.risk_score, s.similarity, s.timestamp
                FROM scans s
                JOIN assets a ON s.asset_id = a.id
                WHERE a.is_reference = 0
-               ORDER BY s.timestamp DESC LIMIT 5"""
+               ORDER BY s.timestamp DESC LIMIT 10"""
         )
         recent = await cur.fetchall()
+
+        cur = await db.execute(
+            """SELECT COUNT(*) as cnt FROM scans s
+               JOIN assets a ON s.asset_id = a.id
+               WHERE a.is_reference = 0"""
+        )
+        total_scans = (await cur.fetchone())["cnt"]
 
     return {
         "total_assets": total_assets,
         "total_violations": total_violations,
+        "total_scans": total_scans,
         "avg_risk_score": avg_risk,
         "recent_activity": [dict(r) for r in recent],
+        "days_filter": days,
     }
+
+
+@app.get("/dashboard/trend")
+async def dashboard_trend(days: int = 7):
+    """Return daily scan counts grouped by status for trend chart."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """SELECT
+                 date(s.timestamp) as day,
+                 SUM(CASE WHEN s.status='Original'   THEN 1 ELSE 0 END) as original,
+                 SUM(CASE WHEN s.status='Suspicious' THEN 1 ELSE 0 END) as suspicious,
+                 SUM(CASE WHEN s.status='Copied'     THEN 1 ELSE 0 END) as copied,
+                 AVG(s.similarity) as avg_similarity
+               FROM scans s
+               JOIN assets a ON s.asset_id = a.id
+               WHERE a.is_reference = 0
+                 AND s.timestamp >= datetime('now', '-' || ? || ' days')
+               GROUP BY day ORDER BY day ASC""",
+            (days,),
+        )
+        rows = await cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.get("/export/violations.csv")
+async def export_violations_csv():
+    """Download violations as CSV file."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """SELECT s.id, a.filename, a.platform, s.risk_score,
+                      s.similarity, s.ai_similarity, s.hash_similarity,
+                      s.status, s.confidence, s.timestamp, a.source_url
+               FROM scans s
+               JOIN assets a ON s.asset_id = a.id
+               WHERE s.status = 'Copied' AND a.is_reference = 0
+                 AND (s.is_false_positive IS NULL OR s.is_false_positive = 0)
+               ORDER BY s.risk_score DESC"""
+        )
+        rows = await cur.fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Filename", "Platform", "Risk Score",
+                     "Similarity %", "AI Similarity %", "Hash Similarity %",
+                     "Status", "Confidence", "Timestamp", "Source URL"])
+    for r in rows:
+        writer.writerow([
+            r["id"], r["filename"], r["platform"], r["risk_score"],
+            r["similarity"], r["ai_similarity"] or 0, r["hash_similarity"] or 0,
+            r["status"], r["confidence"], r["timestamp"], r["source_url"] or "",
+        ])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=guardsport_violations.csv"},
+    )
 
 
 @app.post("/generate-legal")

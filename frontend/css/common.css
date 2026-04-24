@@ -547,11 +547,126 @@ tr:hover td {
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
+/* ── Hamburger Menu ──────────────────────────────────── */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  margin-left: 8px;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px; height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.25s;
+}
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Mobile nav overlay */
+.nav-mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 64px; left: 0; right: 0; bottom: 0;
+  background: rgba(6,9,15,0.97);
+  z-index: 99;
+  flex-direction: column;
+  padding: 24px;
+  gap: 8px;
+}
+.nav-mobile-overlay.open { display: flex; }
+.nav-mobile-overlay a {
+  padding: 14px 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  display: block;
+}
+.nav-mobile-overlay a.active,
+.nav-mobile-overlay a:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: var(--blue-light); }
+
+/* ── Responsive Breakpoints ──────────────────────────── */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
+  .metric-grid { grid-template-columns: 1fr 1fr; }
   .page-wrapper { padding: 80px 16px 48px; }
+
+  /* Nav — show hamburger, hide links */
+  .nav-links { display: none; }
+  .nav-hamburger { display: flex; }
+
+  /* Buttons — full width on mobile forms */
+  .btn-block-mobile { width: 100%; justify-content: center; }
+
+  /* Tables — horizontal scroll */
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  td, th { padding: 10px 12px; font-size: 0.8rem; }
+
+  /* Cards */
+  .card { padding: 16px; }
+  .card-lg { padding: 20px; }
+
+  /* Score grid — 2-col on mobile */
+  .scores-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Status badge — smaller */
+  .status-badge-large {
+    font-size: 1rem !important;
+    padding: 12px 20px !important;
+  }
+
+  /* Section header — stack on mobile */
+  .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+  /* Upload layout */
+  .upload-layout { padding: 80px 16px 48px; }
+
+  /* Dashboard charts */
+  .chart-grid-2 { grid-template-columns: 1fr !important; }
+
+  /* Toast — full width at bottom */
+  #gs-toast-container {
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+  }
+  #gs-toast-container > div { min-width: unset !important; max-width: 100% !important; }
+
+  /* Results layout */
+  .results-layout { padding: 80px 16px 48px !important; }
 }
+
+/* Small mobile */
+@media (max-width: 480px) {
+  h1 { font-size: 1.8rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  .metric-grid { grid-template-columns: 1fr; }
+  .scores-grid { grid-template-columns: 1fr !important; }
+  .nav-logo span.logo-badge { display: none; }
+}
+
 
 /* ── Theme Transition ────────────────────────────────── */
 *,

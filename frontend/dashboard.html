@@ -43,6 +43,7 @@
     .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
   </style>
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
 </head>
 <body>
 
@@ -71,9 +72,20 @@
       <h1>Dashboard</h1>
       <p>Real-time overview of your protected sports media assets</p>
     </div>
-    <a href="upload.html" class="btn btn-primary" id="dash-scan-btn">
-      + Scan New Media
-    </a>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <!-- Date range filter -->
+      <div style="display:flex; gap:4px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:4px;">
+        <button class="btn btn-sm range-btn active" data-days="7" id="range-7">7d</button>
+        <button class="btn btn-sm range-btn" data-days="30" id="range-30">30d</button>
+        <button class="btn btn-sm range-btn" data-days="90" id="range-90">90d</button>
+      </div>
+      <!-- CSV Export -->
+      <a href="http://localhost:8000/export/violations.csv" download="guardsport_violations.csv" class="btn btn-secondary" id="btn-csv-export" title="Download all violations as CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </a>
+      <a href="upload.html" class="btn btn-primary" id="dash-scan-btn">+ Scan New Media</a>
+    </div>
   </div>
 
   <!-- KPI Cards -->
@@ -162,21 +174,45 @@
       <div id="platform-legend" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
     </div>
   </div>
+
+  <!-- Similarity Trend Chart -->
+  <div class="card" style="margin-top:24px;" id="sim-trend-card">
+    <div class="section-header mb-16">
+      <div class="section-title">Similarity Score Trend</div>
+      <span style="font-size:0.8rem; color:var(--text-muted);">Average risk score over time</span>
+    </div>
+    <div style="position: relative; height: 180px;">
+      <canvas id="simTrendChart"></canvas>
+    </div>
+    <p id="sim-trend-empty" style="text-align:center; color:var(--text-muted); font-size:0.8rem; padding:12px; display:none;">No trend data yet — run some scans first.</p>
+  </div>
 </div>
 
 
 <div class="toast-container" id="toast-container"></div>
 
+<style>
+  .range-btn { background: transparent; color: var(--text-muted); border: none; transition: all 0.15s; }
+  .range-btn.active { background: var(--blue); color: white; }
+  .range-btn:hover:not(.active) { color: var(--text-primary); }
+</style>
+
 <script type="module">
 import { getDashboardStats, getAllScans, statusClass, statusIcon, riskLabel, riskColor, formatDate } from './js/api.js';
 
-function showToast(type, msg) {
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  document.getElementById('toast-container').appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-}
+let currentDays = 7;
+
+// Date range filter
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays = +btn.dataset.days;
+    const title = document.querySelector('#chart-card .section-title');
+    if (title) title.textContent = `Scan Trend — Last ${currentDays} Days`;
+    loadDashboard(currentDays);
+  });
+});
 
 function countUp(el, end, suffix = '', duration = 1200) {
   const startTime = performance.now();
@@ -189,9 +225,12 @@ function countUp(el, end, suffix = '', duration = 1200) {
   requestAnimationFrame(tick);
 }
 
-async function loadDashboard() {
+async function loadDashboard(days = 7) {
   try {
-    const [stats, scans] = await Promise.all([getDashboardStats(), getAllScans()]);
+    const [stats, scans] = await Promise.all([
+      getDashboardStats(days),
+      getAllScans(),
+    ]);
 
     // ── KPI Cards ─────────────────────────────────────────────────────────────
     const kpiGrid = document.getElementById('kpi-grid');
@@ -302,7 +341,7 @@ async function loadDashboard() {
   }
 }
 
-loadDashboard();
+loadDashboard(7);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

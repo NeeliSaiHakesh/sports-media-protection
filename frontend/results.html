@@ -180,6 +180,7 @@
     }
   </style>
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
 </head>
 <body>
 
@@ -223,6 +224,10 @@
       <a href="upload.html" class="btn btn-secondary" id="btn-scan-another">Scan Another</a>
       <button class="btn btn-primary" id="btn-legal" style="display:none;">Generate Legal Notice</button>
       <a href="violations.html" class="btn btn-danger" id="btn-violations" style="display:none;">View All Violations</a>
+      <button class="btn btn-secondary" id="btn-false-positive" style="display:none; font-size:0.8rem;" title="Mark this as a false positive — removes it from violations">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        Not a Violation
+      </button>
     </div>
   </div>
 
@@ -242,9 +247,39 @@
   <div id="ai-engine-badge" style="display:none; margin-bottom:20px;">
     <div style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12)); border:1px solid rgba(139,92,246,0.3); border-radius:100px; padding:6px 14px; font-size:0.8rem;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#aiGrad)" stroke-width="2"><defs><linearGradient id="aiGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-      <span style="background:linear-gradient(135deg,#3B82F6,#8B5CF6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:700;" id="ai-model-name">CLIP ViT-B/32</span>
-      <span style="color:var(--text-muted);">· AI-Powered Detection</span>
+      <span style="background:linear-gradient(135deg,#3B82F6,#8B5CF6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:700;" id="ai-model-name">CLIP + DINOv2</span>
+      <span style="color:var(--text-muted);">· Multi-Model AI</span>
       <span style="width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span>
+    </div>
+    <!-- GradCAM explain button -->
+    <button id="btn-explain" class="btn btn-secondary btn-sm" style="margin-left:12px; font-size:0.8rem;" title="Generate AI attention heatmap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Show AI Focus Map
+    </button>
+  </div>
+
+  <!-- GradCAM Heatmap Section -->
+  <div id="explain-section" style="display:none; margin-bottom:24px;">
+    <div class="matches-section">
+      <div class="section-header" style="margin-bottom:16px;">
+        <div class="section-title">AI Attention Heatmap (GradCAM)</div>
+        <button id="btn-explain-close" class="btn btn-secondary btn-sm">Close</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:10px 14px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); border-bottom:1px solid var(--border);">Original Image</div>
+          <img id="explain-original" src="" alt="Original" style="width:100%; height:220px; object-fit:contain; display:block; background:rgba(0,0,0,0.06);"/>
+        </div>
+        <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:10px 14px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); border-bottom:1px solid var(--border);">AI Focus Areas (Red = High Attention)</div>
+          <img id="explain-heatmap" src="" alt="GradCAM heatmap" style="width:100%; height:220px; object-fit:contain; display:block; background:rgba(0,0,0,0.06);"/>
+        </div>
+      </div>
+      <p id="explain-text" style="margin-top:12px; font-size:0.8rem; color:var(--text-muted); line-height:1.5;"></p>
+      <div id="explain-loader" style="text-align:center; padding:32px; display:none;">
+        <div class="scanning-ring" style="width:40px;height:40px;margin:0 auto 12px;"></div>
+        <p style="font-size:0.875rem; color:var(--text-muted);">Generating attention heatmap…</p>
+      </div>
     </div>
   </div>
 
@@ -258,6 +293,7 @@
       </div>
       <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-top:6px;" id="sim-breakdown" class="hidden">
         <span>🧠 CLIP: <span id="val-ai-sim">—</span>%</span>
+        <span>🦕 DINO: <span id="val-dino-sim">—</span>%</span>
         <span>🔢 Hash: <span id="val-hash-sim">—</span>%</span>
       </div>
     </div>
@@ -611,6 +647,95 @@ async function loadResult() {
     document.getElementById('algo-chip').innerHTML = `
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       Algorithm: ${algoNames[result.algorithm] || result.algorithm}`;
+  }
+
+  // ── Wire new feature buttons ──────────────────────────────────────────────
+  // False positive: use asset_id as proxy for scan_id (scan ID = most recent for that asset)
+  if (status === 'Copied') setupFalsePositive(asset_id, null);
+  setupExplain(asset_id, previewUrl);
+}
+
+// ── False Positive Button ─────────────────────────────────────────────────
+async function setupFalsePositive(assetId, scanId) {
+  const btn = document.getElementById('btn-false-positive');
+  if (!btn) return;
+  if (scanId || assetId) {
+    btn.style.display = '';
+    btn.addEventListener('click', async () => {
+      const confirmed = confirm('Mark this scan as "Not a Violation"? It will be removed from the violations dashboard.');
+      if (!confirmed) return;
+      btn.disabled = true;
+      btn.textContent = 'Marking…';
+      try {
+        // Fetch the scan ID for this asset
+        const sid = scanId || assetId;  // best effort
+        const fd = new FormData();
+        fd.append('reason', 'User marked as false positive from results page');
+        const resp = await fetch(`http://localhost:8000/scans/${sid}/false-positive`, { method:'POST', body:fd });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        showToast('Marked as Not a Violation — removed from dashboard', 'success');
+        btn.textContent = '✓ No longer flagged';
+        document.getElementById('legal-cta-card').classList.add('hidden');
+        document.getElementById('btn-violations').style.display = 'none';
+        document.getElementById('btn-legal').style.display = 'none';
+        const hero = document.getElementById('status-hero');
+        hero.style.borderColor = 'rgba(16,185,129,0.4)';
+        hero.style.boxShadow   = '0 0 40px rgba(16,185,129,0.1)';
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Not a Violation';
+        showToast('Failed to mark: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
+// ── GradCAM Explain ───────────────────────────────────────────────────────
+function setupExplain(assetId, previewUrl) {
+  const btnExplain   = document.getElementById('btn-explain');
+  const btnClose     = document.getElementById('btn-explain-close');
+  const explainSec   = document.getElementById('explain-section');
+  const explainLoader= document.getElementById('explain-loader');
+  const explainHeat  = document.getElementById('explain-heatmap');
+  const explainOrig  = document.getElementById('explain-original');
+  const explainText  = document.getElementById('explain-text');
+
+  if (!btnExplain) return;
+
+  let heatmapLoaded = false;
+
+  btnExplain.addEventListener('click', async () => {
+    explainSec.style.display = 'block';
+    if (previewUrl) explainOrig.src = previewUrl;
+    explainHeat.style.display = 'none';
+    explainLoader.style.display = 'block';
+    explainText.textContent = '';
+
+    if (heatmapLoaded) {
+      explainLoader.style.display = 'none';
+      explainHeat.style.display = 'block';
+      return;
+    }
+
+    try {
+      const data = await fetch(`http://localhost:8000/assets/${assetId}/explain`).then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
+      explainHeat.src = data.heatmap;
+      explainText.textContent = data.explanation;
+      heatmapLoaded = true;
+    } catch (err) {
+      explainText.textContent = 'Could not generate heatmap: ' + err.message;
+      showToast('GradCAM failed: ' + err.message, 'error');
+    } finally {
+      explainLoader.style.display = 'none';
+      explainHeat.style.display   = 'block';
+    }
+  });
+
+  if (btnClose) {
+    btnClose.addEventListener('click', () => { explainSec.style.display = 'none'; });
   }
 }
 

@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS scans (
     matches_json TEXT DEFAULT '[]',
     top_match_source TEXT DEFAULT '',
     num_matches INTEGER DEFAULT 0,
+    is_false_positive INTEGER DEFAULT 0,
+    false_positive_reason TEXT DEFAULT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (asset_id) REFERENCES assets(id)
 )
@@ -51,16 +53,16 @@ async def init_db():
         await db.execute(CREATE_ASSETS)
         await db.execute(CREATE_SCANS)
         # Migrate existing DB — add new columns if they don't exist
-        for col, definition in [
-            ("embedding",       "TEXT DEFAULT NULL"),
-            ("ai_similarity",   "REAL DEFAULT 0.0"),
-            ("hash_similarity", "REAL DEFAULT 0.0"),
+        for col, definition, table in [
+            ("embedding",            "TEXT DEFAULT NULL",    "assets"),
+            ("ai_similarity",        "REAL DEFAULT 0.0",    "scans"),
+            ("hash_similarity",      "REAL DEFAULT 0.0",    "scans"),
+            ("is_false_positive",    "INTEGER DEFAULT 0",   "scans"),
+            ("false_positive_reason","TEXT DEFAULT NULL",   "scans"),
         ]:
             try:
-                if col in ("ai_similarity", "hash_similarity"):
-                    await db.execute(f"ALTER TABLE scans ADD COLUMN {col} {definition}")
-                else:
-                    await db.execute(f"ALTER TABLE assets ADD COLUMN {col} {definition}")
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {definition}")
             except Exception:
                 pass  # Column already exists — ignore
         await db.commit()
+
