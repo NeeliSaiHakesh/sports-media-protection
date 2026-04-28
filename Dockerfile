@@ -49,7 +49,7 @@ RUN cat > /app/start.sh <<'SCRIPT'
 #!/bin/bash
 set -e
 
-echo "🛡️  Media Guard AI — Starting on Cloud Run"
+echo "🛡️  Media Guard — Starting on Cloud Run"
 
 # Start FastAPI backend (in background)
 cd /app/backend

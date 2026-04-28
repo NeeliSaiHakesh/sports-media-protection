@@ -1,5 +1,5 @@
 #!/bin/bash
-# start.sh — Launch Media Guard AI (Frontend + Backend)
+# start.sh — Launch Media Guard (Frontend + Backend)
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -7,7 +7,7 @@ BACKEND="$SCRIPT_DIR/backend"
 FRONTEND="$SCRIPT_DIR/frontend"
 
 echo ""
-echo "🛡️  Media Guard AI — Digital Asset Protection for Sports Media"
+echo "🛡️  Media Guard — Digital Asset Protection for Sports Media"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -43,7 +43,7 @@ echo "  ✅ Frontend ready (PID: $FE_PID)"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🚀 Media Guard AI is RUNNING!"
+echo "🚀 Media Guard is RUNNING!"
 echo ""
 echo "  🌐 Frontend:   http://localhost:3000"
 echo "  ⚙️  API Docs:   http://localhost:8000/docs"
