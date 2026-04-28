@@ -864,7 +864,7 @@ async def export_scans_csv():
 @app.post("/watermark")
 async def watermark_image(
     file: UploadFile = File(...),
-    owner_name: str = Form("Media Guard"),
+    owner_name: str = Form("Media Guard AI"),
     style: str = Form("visible"),
     position: str = Form("bottom-right"),
 ):
