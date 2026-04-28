@@ -1,4 +1,4 @@
-# GuardSport AI — Digital Asset Protection for Sports Media
+# Media Guard — Digital Asset Protection for Sports Media
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
@@ -10,7 +10,7 @@
 
 ## Overview
 
-GuardSport AI is a full-stack SaaS platform that:
+Media Guard is a full-stack SaaS platform that:
 - **Fingerprints** uploaded images using perceptual hashing (average, difference, or color hash)
 - **Detects** unauthorized copies by comparing against a reference database
 - **Classifies** content as Original / Suspicious / Copied with confidence scoring
@@ -42,8 +42,8 @@ GuardSport AI is a full-stack SaaS platform that:
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/guardsport-ai.git
-cd guardsport-ai/sports-media-protection
+git clone https://github.com/<your-username>/media-guard.git
+cd media-guard/sports-media-protection
 
 # Install backend dependencies
 pip install -r backend/requirements.txt

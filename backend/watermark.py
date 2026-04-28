@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont, ExifTags
 
 def visible_watermark(
     image_path: str,
-    owner_name: str = "GuardSport AI",
+    owner_name: str = "Media Guard",
     opacity: int = 180,
     position: str = "bottom-right",
 ) -> bytes:
@@ -34,7 +34,7 @@ def visible_watermark(
 
     # Text content
     text = f"© {owner_name}"
-    sub_text = "Protected by GuardSport AI"
+    sub_text = "Protected by Media Guard"
 
     # Font size relative to image size
     font_size = max(16, int(min(W, H) * 0.035))
@@ -87,7 +87,7 @@ def visible_watermark(
 
 # ── Diagonal tiled watermark (subtle, covers whole image) ─────────────────────
 
-def tiled_watermark(image_path: str, owner_name: str = "GuardSport AI") -> bytes:
+def tiled_watermark(image_path: str, owner_name: str = "Media Guard") -> bytes:
     """Add a subtle diagonal tiled watermark across the entire image."""
     img = Image.open(image_path).convert("RGBA")
     W, H = img.size
@@ -95,7 +95,7 @@ def tiled_watermark(image_path: str, owner_name: str = "GuardSport AI") -> bytes
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    text = f"© {owner_name} · GuardSport AI"
+    text = f"© {owner_name} · Media Guard"
     font_size = max(12, int(min(W, H) * 0.022))
     try:
         font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)

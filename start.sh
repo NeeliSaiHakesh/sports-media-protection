@@ -1,5 +1,5 @@
 #!/bin/bash
-# start.sh — Launch GuardSport AI (Frontend + Backend)
+# start.sh — Launch Media Guard (Frontend + Backend)
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -7,7 +7,7 @@ BACKEND="$SCRIPT_DIR/backend"
 FRONTEND="$SCRIPT_DIR/frontend"
 
 echo ""
-echo "🛡️  GuardSport AI — Digital Asset Protection for Sports Media"
+echo "🛡️  Media Guard — Digital Asset Protection for Sports Media"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -19,7 +19,7 @@ sleep 1
 # Start Backend
 echo "▶ Starting API server on http://localhost:8000 ..."
 cd "$BACKEND"
-nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/guardsport-api.log 2>&1 &
+nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/mediaguard-api.log 2>&1 &
 API_PID=$!
 
 # Wait for backend
@@ -36,14 +36,14 @@ done
 echo ""
 echo "▶ Starting frontend server on http://localhost:3000 ..."
 cd "$FRONTEND"
-nohup python -m http.server 3000 > /tmp/guardsport-frontend.log 2>&1 &
+nohup python -m http.server 3000 > /tmp/mediaguard-frontend.log 2>&1 &
 FE_PID=$!
 sleep 1
 echo "  ✅ Frontend ready (PID: $FE_PID)"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🚀 GuardSport AI is RUNNING!"
+echo "🚀 Media Guard is RUNNING!"
 echo ""
 echo "  🌐 Frontend:   http://localhost:3000"
 echo "  ⚙️  API Docs:   http://localhost:8000/docs"

@@ -533,7 +533,7 @@ async def export_violations_csv():
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=guardsport_violations.csv"},
+        headers={"Content-Disposition": "attachment; filename=mediaguard_violations.csv"},
     )
 
 
@@ -692,7 +692,7 @@ async def scan_from_url(
     try:
         req = urllib.request.Request(
             image_url,
-            headers={"User-Agent": "GuardSport-AI/1.0 (image scanner)"},
+            headers={"User-Agent": "Media-Guard/1.0 (image scanner)"},
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             content_type = resp.headers.get("Content-Type", "image/jpeg")
@@ -815,7 +815,7 @@ async def export_violations_csv():
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=guardsport_violations.csv"},
+        headers={"Content-Disposition": "attachment; filename=mediaguard_violations.csv"},
     )
 
 
@@ -857,14 +857,14 @@ async def export_scans_csv():
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=guardsport_scan_history.csv"},
+        headers={"Content-Disposition": "attachment; filename=mediaguard_scan_history.csv"},
     )
 
 
 @app.post("/watermark")
 async def watermark_image(
     file: UploadFile = File(...),
-    owner_name: str = Form("GuardSport AI"),
+    owner_name: str = Form("Media Guard"),
     style: str = Form("visible"),
     position: str = Form("bottom-right"),
 ):
