@@ -123,7 +123,7 @@
       <p>All scanned media assets with their scan results</p>
     </div>
     <div style="display:flex; gap:8px;">
-      <a href="http://localhost:8000/export/scans.csv" class="btn btn-secondary" id="export-csv-btn" target="_blank">Export CSV</a>
+      <a href="javascript:void(0)" onclick="window.open((window.location.port==='3000'?'http://localhost:8000':'')+'/export/scans.csv')" class="btn btn-secondary" id="export-csv-btn" target="_blank">Export CSV</a>
       <a href="upload.html" class="btn btn-primary">+ Scan New</a>
     </div>
   </div>
@@ -145,7 +145,7 @@
 <script type="module">
 import { getAssets, riskColor, riskLabel, formatDate } from './js/api.js';
 
-const API = 'http://localhost:8000';
+const API = window.location.port === '3000' ? 'http://localhost:8000' : '';
 let allAssets = [];
 let currentFilter = 'all';
 

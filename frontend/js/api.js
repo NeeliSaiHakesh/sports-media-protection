@@ -1,6 +1,9 @@
 /* api.js — Fetch wrapper for backend API */
 
-const API_BASE = 'http://localhost:8000';
+// Auto-detect API base: same origin on Cloud Run, localhost:8000 in dev
+export const API_BASE = window.location.port === '3000'
+  ? 'http://localhost:8000'
+  : '';
 
 export async function uploadAsset(file, sourceUrl = '', platform = 'Unknown', algorithm = 'average') {
   const form = new FormData();

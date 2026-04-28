@@ -83,7 +83,7 @@
       <p>Full audit log of all analyzed media assets</p>
     </div>
     <div style="display:flex; gap:8px; align-items:center;">
-      <a href="http://localhost:8000/export/scans.csv" class="btn btn-secondary" target="_blank">Export CSV</a>
+      <a href="javascript:void(0)" onclick="window.open((window.location.port==='3000'?'http://localhost:8000':'')+'/export/scans.csv')" class="btn btn-secondary" target="_blank">Export CSV</a>
       <a href="upload.html" class="btn btn-primary">+ New Scan</a>
     </div>
   </div>

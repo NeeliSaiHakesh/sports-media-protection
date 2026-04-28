@@ -80,7 +80,7 @@
         <button class="btn btn-sm range-btn" data-days="90" id="range-90">90d</button>
       </div>
       <!-- CSV Export -->
-      <a href="http://localhost:8000/export/violations.csv" download="mediaguard_violations.csv" class="btn btn-secondary" id="btn-csv-export" title="Download all violations as CSV">
+      <a href="javascript:void(0)" onclick="window.open((window.location.port==='3000'?'http://localhost:8000':'')+'/export/violations.csv')" download="mediaguard_violations.csv" class="btn btn-secondary" id="btn-csv-export" title="Download all violations as CSV">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export CSV
       </a>
@@ -417,7 +417,7 @@ renderTrendChart();
 
 async function renderPlatformChart() {
   try {
-    const data = await fetch('http://localhost:8000/dashboard/platform-breakdown').then(r => r.json());
+    const data = await fetch((window.location.port==='3000'?'http://localhost:8000':'') + '/dashboard/platform-breakdown').then(r => r.json());
     if (!data || data.length === 0) {
       document.getElementById('platform-card').innerHTML +=
         '<p style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:12px;">No violation data yet</p>';

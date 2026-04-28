@@ -183,7 +183,7 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-const API = 'http://localhost:8000';
+const API = window.location.port === '3000' ? 'http://localhost:8000' : '';
 let selectedFile = null;
 let originalUrl = null;
 

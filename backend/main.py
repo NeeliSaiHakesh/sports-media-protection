@@ -35,6 +35,12 @@ from ai_engine import (
 from legal import generate_dmca
 from scanner import scan_asset
 from watermark import extract_exif, visible_watermark, tiled_watermark
+from vision_api import (
+    web_detect as vision_web_detect,
+    label_detect as vision_label_detect,
+    safe_search as vision_safe_search,
+    is_available as vision_is_available,
+)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
@@ -914,3 +920,96 @@ async def platform_breakdown():
         rows = await cur.fetchall()
     return [dict(r) for r in rows]
 
+
+# ── Google Cloud Vision API ────────────────────────────────────────────────
+
+@app.get("/vision/status")
+async def vision_status():
+    """Check if Google Cloud Vision API is configured and available."""
+    return {
+        "available": vision_is_available(),
+        "service": "Google Cloud Vision API",
+        "features": ["web_detection", "label_detection", "safe_search"] if vision_is_available() else [],
+    }
+
+
+@app.get("/vision/web-detect/{asset_id}")
+async def vision_web_detection(asset_id: int):
+    """Use Google Cloud Vision to find where this image appears on the web."""
+    if not vision_is_available():
+        raise HTTPException(
+            503,
+            "Google Cloud Vision API not configured. "
+            "Set GOOGLE_APPLICATION_CREDENTIALS environment variable."
+        )
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT file_path, filename FROM assets WHERE id = ?", (asset_id,)
+        )
+        row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(404, "Asset not found")
+
+    file_path = row["file_path"]
+    if not Path(file_path).exists():
+        raise HTTPException(404, "Asset file not found on disk")
+
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, vision_web_detect, file_path)
+
+    if result is None:
+        raise HTTPException(503, "Vision API call failed")
+
+    return {
+        "asset_id": asset_id,
+        "filename": row["filename"],
+        **result,
+    }
+
+
+@app.get("/vision/labels/{asset_id}")
+async def vision_labels(asset_id: int):
+    """Use Google Vision to auto-detect labels/tags for an image."""
+    if not vision_is_available():
+        raise HTTPException(503, "Vision API not configured")
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT file_path FROM assets WHERE id = ?", (asset_id,)
+        )
+        row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(404, "Asset not found")
+
+    import asyncio
+    loop = asyncio.get_event_loop()
+    labels = await loop.run_in_executor(None, vision_label_detect, row["file_path"])
+    return {"asset_id": asset_id, "labels": labels or []}
+
+
+@app.get("/vision/safe-search/{asset_id}")
+async def vision_safe(asset_id: int):
+    """Run Google Vision safe search detection on an image."""
+    if not vision_is_available():
+        raise HTTPException(503, "Vision API not configured")
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT file_path FROM assets WHERE id = ?", (asset_id,)
+        )
+        row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(404, "Asset not found")
+
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, vision_safe_search, row["file_path"])
+    return {"asset_id": asset_id, "safe_search": result or {}}

@@ -432,7 +432,7 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script type="module">
-  import { uploadAsset, scanUrl } from './js/api.js';
+  import { uploadAsset, scanUrl, API_BASE } from './js/api.js';
 
   const dropZone   = document.getElementById('drop-zone');
   const fileInput  = document.getElementById('file-input');
@@ -671,14 +671,14 @@
       fd.append('platform', platform);
       fd.append('algorithm', algorithm);
       const result = await animateSteps(
-        fetch('http://localhost:8000/upload-url', { method:'POST', body:fd })
+        fetch(API_BASE + '/upload-url', { method:'POST', body:fd })
           .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       );
       overlay.classList.remove('active');
       sessionStorage.setItem('scanResult', JSON.stringify({
         ...result,
         fileName: result.filename || imgUrl.split('/').pop(),
-        previewUrl: `http://localhost:8000/asset-image/${result.asset_id}`,
+        previewUrl: `${API_BASE}/asset-image/${result.asset_id}`,
       }));
       window.location.href = 'results.html';
     } catch (err) {
@@ -692,10 +692,10 @@
   document.getElementById('demo-btn').addEventListener('click', async () => {
     showToast('Loading demo image…', 'info');
     try {
-      const assets = await fetch('http://localhost:8000/assets/reference').then(r => r.json());
+      const assets = await fetch(API_BASE + '/assets/reference').then(r => r.json());
       if (!assets.length) { showToast('No reference assets found for demo.', 'error'); return; }
       const ref = assets[Math.floor(Math.random() * assets.length)];
-      const imgBlob = await fetch(`http://localhost:8000/asset-image/${ref.id}`).then(r => r.blob());
+      const imgBlob = await fetch(`${API_BASE}/asset-image/${ref.id}`).then(r => r.blob());
       const demoFile = new File([imgBlob], `demo_${ref.filename}`, { type: imgBlob.type || 'image/jpeg' });
       document.getElementById('platform-select').value = 'YouTube';
       addFiles([demoFile]);
