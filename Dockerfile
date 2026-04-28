@@ -32,7 +32,7 @@ server {
     }
 
     # Proxy all API calls to the FastAPI backend
-    location ~ ^/(upload|upload-url|scan-url|scan|scans|assets|asset-image|violations|dashboard|generate-legal|bulk-legal|export|match|watermark|health|ai|vision) {
+    location ~ ^/(upload|upload-url|scan-url|scan|scans|assets|asset-image|violations|dashboard|generate-legal|bulk-legal|export|match|watermark|health|ai|vision|docs|openapi)(/|$) {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
