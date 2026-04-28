@@ -1,6 +1,8 @@
 /* api.js — Fetch wrapper for backend API */
 
-// Auto-detect API base: same origin on Cloud Run, localhost:8000 in dev
+// Auto-detect API base:
+//   - Port 3000 → local dev, backend is on localhost:8000
+//   - Port 8000 or any other (ngrok/Cloud Run) → same-origin, use relative URLs
 export const API_BASE = window.location.port === '3000'
   ? 'http://localhost:8000'
   : '';

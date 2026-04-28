@@ -15,7 +15,8 @@ from typing import Optional
 import aiosqlite
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from database import DB_PATH, init_db
 from fingerprint import (
@@ -58,6 +59,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Skip ngrok browser warning for all visitors ────────────────────────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+
+class NgrokSkipWarningMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response = await call_next(request)
+        response.headers["ngrok-skip-browser-warning"] = "true"
+        return response
+
+app.add_middleware(NgrokSkipWarningMiddleware)
+
+# ── Serve frontend as static files (enables single-port ngrok deployment) ──────
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
+if FRONTEND_DIR.exists():
+    app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    return RedirectResponse(url="/app/index.html")
 
 
 # ── Startup ────────────────────────────────────────────────────────────────────
