@@ -1,3 +1,13 @@
+---
+title: MediaGuard AI
+emoji: 🛡️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # Media Guard — Digital Asset Protection for Sports Media
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://python.org)

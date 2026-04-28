@@ -72,8 +72,8 @@ nginx -g "daemon off;"
 SCRIPT
 RUN chmod +x /app/start.sh
 
-# Cloud Run uses PORT env variable (default 8080)
-ENV PORT=8080
-EXPOSE 8080
+# HuggingFace Spaces requires port 7860
+ENV PORT=7860
+EXPOSE 7860
 
 CMD ["/app/start.sh"]
